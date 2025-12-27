@@ -2,14 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jsonlt-spec",
   "compatibility_date": "2025-12-22",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "binding": "ASSETS",
-    "directory": "./build",
-    "serve_directly": true,
-    "routing": {
-      "has_user_worker": false
-    }
+    "directory": "./build"
   },
   "observability": {
     "enabled": true
