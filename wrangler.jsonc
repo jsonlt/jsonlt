@@ -10,10 +10,10 @@
     "enabled": true
   },
 
-  // Production routes - deploy to spec.jsonlt.org/latest/
-  // NOTE: Configure a redirect from / to /latest/ in Cloudflare dashboard
+  // Production deployment to spec.jsonlt.org
+  // NOTE: Configure a redirect from / to /latest/ in Cloudflare dashboard or use _redirects file
   "routes": [
-    { "pattern": "spec.jsonlt.org/latest/*", "custom_domain": true }
+    { "pattern": "spec.jsonlt.org", "custom_domain": true }
   ],
 
   // Preview environment for PR-based deployments
