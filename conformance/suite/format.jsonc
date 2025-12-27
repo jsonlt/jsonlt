@@ -1,0 +1,195 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "format",
+  "tests": [
+    {
+      "id": "format-empty-file-valid",
+      "description": "Empty file is valid and represents empty table",
+      "key": "id",
+      "input": "",
+      "expect": "accept",
+      "state": {}
+    },
+    {
+      "id": "format-valid-single-line",
+      "description": "Single valid JSON object with newline is accepted",
+      "key": "id",
+      "input": "{\"id\": 1, \"name\": \"test\"}\n",
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "name": "test"}
+      }
+    },
+    {
+      "id": "format-valid-multiple-lines",
+      "description": "Multiple valid JSON objects are accepted",
+      "key": "id",
+      "input": "{\"id\": 1}\n{\"id\": 2}\n",
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1},
+        "2": {"id": 2}
+      }
+    },
+    {
+      "id": "format-invalid-json",
+      "description": "Invalid JSON is rejected",
+      "key": "id",
+      "input": "{\"id\": 1, \"name\": }\n",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-not-object",
+      "description": "Non-object JSON values are rejected",
+      "key": "id",
+      "input": "[1, 2, 3]\n",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-duplicate-keys-rejected",
+      "description": "JSON objects with duplicate keys are rejected",
+      "key": "id",
+      "input": "{\"id\": 1, \"id\": 2}\n",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-non-boolean",
+      "description": "$deleted with non-boolean value is rejected",
+      "key": "id",
+      "input": "{\"$deleted\": \"true\", \"id\": 1}\n",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-whitespace-only-line",
+      "description": "Line containing only whitespace triggers parse error",
+      "key": "id",
+      "input": "{\"id\": 1}\n   \n{\"id\": 2}\n",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-escaped-newline-ok",
+      "description": "Escaped newlines in strings are valid",
+      "key": "id",
+      "input": "{\"id\": 1, \"text\": \"line1\\nline2\"}\n",
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "text": "line1\nline2"}
+      }
+    },
+    {
+      "id": "format-unicode-content",
+      "description": "Unicode content is preserved (emoji, CJK, combining characters)",
+      "key": "id",
+      "input": "{\"id\": \"test\", \"emoji\": \"🎉\", \"cjk\": \"日本語\", \"combining\": \"é\"}\n",
+      "expect": "accept",
+      "state": {
+        "test": {"id": "test", "emoji": "🎉", "cjk": "日本語", "combining": "é"}
+      }
+    },
+    {
+      "id": "format-missing-newline-accepted",
+      "description": "Parser accepts valid JSON without terminal newline (SHALL per spec)",
+      "key": "id",
+      "input": "{\"id\": 1}",
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "format-utf8-overlong-2byte-nul",
+      "description": "Reject 2-byte overlong encoding of NUL (0xC0 0x80) per RFC 3629",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRlwIBzdCJ9Cg==",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-overlong-2byte-del",
+      "description": "Reject 2-byte overlong encoding of DEL (0xC1 0xBF) per RFC 3629",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRlwb9zdCJ9Cg==",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-overlong-3byte-nul",
+      "description": "Reject 3-byte overlong encoding of NUL (0xE0 0x80 0x80) per RFC 3629",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRl4ICAc3QifQo=",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-overlong-3byte-slash",
+      "description": "Reject 3-byte overlong encoding of slash (0xE0 0x80 0xAF) per RFC 3629",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRl4ICvc3QifQo=",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-invalid-lead-byte",
+      "description": "Reject invalid UTF-8 lead byte (0xFF cannot start any valid sequence)",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRl/3N0In0K",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-truncated-sequence",
+      "description": "Reject truncated UTF-8 multi-byte sequence (0xC2 without continuation)",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRlwnN0In0K",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-surrogate-codepoint",
+      "description": "Reject UTF-8 encoded surrogate code point U+D800 (0xED 0xA0 0x80)",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRl7aCAc3QifQo=",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-utf8-overlong-4byte",
+      "description": "Reject 4-byte overlong encoding of NUL (0xF0 0x80 0x80 0x80)",
+      "key": "id",
+      "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRl8ICAgHN0In0K",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-false",
+      "description": "$deleted with boolean false is rejected (only true is valid)",
+      "key": "id",
+      "input": ["{\"$deleted\": false, \"id\": 1}"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-nesting-depth-64-valid",
+      "description": "JSON with 64 levels of nesting is accepted (minimum required support)",
+      "key": "id",
+      "input": ["{\"id\": 1, \"d\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "d": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}
+      }
+    },
+    {
+      "id": "format-nesting-depth-65-limit-error",
+      "description": "JSON with 65 levels of nesting exceeds minimum required support (LIMIT_ERROR)",
+      "key": "id",
+      "input": ["{\"id\": 1, \"d\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"],
+      "expect": "reject",
+      "error": "LIMIT_ERROR"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+	"devDependencies": {
+		"vnu-jar": "25.12.26",
+		"wrangler": "^4.0.0"
+	}
+}

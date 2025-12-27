@@ -1,0 +1,194 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "state",
+  "tests": [
+    {
+      "id": "state-single-record",
+      "description": "Single record produces single-entry state"
+    ,
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "state-multiple-records",
+      "description": "Multiple records with distinct keys all appear in state",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\"}",
+        "{\"id\": \"bob\", \"role\": \"user\"}",
+        "{\"id\": \"carol\", \"role\": \"user\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin"},
+        "bob": {"id": "bob", "role": "user"},
+        "carol": {"id": "carol", "role": "user"}
+      }
+    },
+    {
+      "id": "state-upsert-overwrite",
+      "description": "Later upsert overwrites earlier record with same key",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"user\"}",
+        "{\"id\": \"alice\", \"role\": \"admin\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "state-tombstone-removes",
+      "description": "Tombstone removes record from state",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\"}",
+        "{\"$deleted\": true, \"id\": \"alice\"}"
+      ],
+      "state": {}
+    },
+    {
+      "id": "state-tombstone-nonexistent",
+      "description": "Tombstone for nonexistent key has no effect",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\"}",
+        "{\"$deleted\": true, \"id\": \"bob\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "state-reinsert-after-delete",
+      "description": "Record can be reinserted after deletion",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\"}",
+        "{\"$deleted\": true, \"id\": \"alice\"}",
+        "{\"id\": \"alice\", \"role\": \"user\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "user"}
+      }
+    },
+    {
+      "id": "state-integer-key",
+      "description": "Integer keys work correctly",
+      "key": "id",
+      "input": [
+        "{\"id\": 1, \"name\": \"first\"}",
+        "{\"id\": 2, \"name\": \"second\"}"
+      ],
+      "state": {
+        "1": {"id": 1, "name": "first"},
+        "2": {"id": 2, "name": "second"}
+      }
+    },
+    {
+      "id": "state-integer-float-equivalent",
+      "description": "Integer written as 1.0 is equivalent to 1",
+      "key": "id",
+      "input": [
+        "{\"id\": 1, \"v\": 1}",
+        "{\"id\": 1.0, \"v\": 2}"
+      ],
+      "state": {
+        "1": {"id": 1.0, "v": 2}
+      }
+    },
+    {
+      "id": "state-compound-key",
+      "description": "Compound keys work correctly",
+      "key": ["org", "id"],
+      "input": [
+        "{\"org\": \"acme\", \"id\": 1, \"name\": \"alice\"}",
+        "{\"org\": \"acme\", \"id\": 2, \"name\": \"bob\"}",
+        "{\"org\": \"globex\", \"id\": 1, \"name\": \"carol\"}"
+      ],
+      "state": {
+        "[\"acme\",1]": {"org": "acme", "id": 1, "name": "alice"},
+        "[\"acme\",2]": {"org": "acme", "id": 2, "name": "bob"},
+        "[\"globex\",1]": {"org": "globex", "id": 1, "name": "carol"}
+      }
+    },
+    {
+      "id": "state-compound-key-delete",
+      "description": "Tombstone with compound key removes correct record",
+      "key": ["org", "id"],
+      "input": [
+        "{\"org\": \"acme\", \"id\": 1, \"name\": \"alice\"}",
+        "{\"org\": \"acme\", \"id\": 2, \"name\": \"bob\"}",
+        "{\"$deleted\": true, \"org\": \"acme\", \"id\": 1}"
+      ],
+      "state": {
+        "[\"acme\",2]": {"org": "acme", "id": 2, "name": "bob"}
+      }
+    },
+    {
+      "id": "state-with-header",
+      "description": "Header line is not treated as a record",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": \"alice\", \"role\": \"admin\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "state-empty-file",
+      "description": "Empty file produces empty state",
+      "key": "id",
+      "input": [],
+      "state": {}
+    },
+    {
+      "id": "state-header-only",
+      "description": "File with only header produces empty state",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}"
+      ],
+      "state": {}
+    },
+    {
+      "id": "state-extra-fields-preserved",
+      "description": "Extra fields in records are preserved",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"role\": \"admin\", \"email\": \"alice@example.com\", \"active\": true}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "role": "admin", "email": "alice@example.com", "active": true}
+      }
+    },
+    {
+      "id": "state-nested-values",
+      "description": "Nested objects and arrays in records are preserved",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"meta\": {\"tags\": [\"admin\", \"active\"], \"created\": \"2025-01-01\"}}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "meta": {"tags": ["admin", "active"], "created": "2025-01-01"}}
+      }
+    },
+    {
+      "id": "state-record-only-key-field",
+      "description": "Record containing only the key field is valid",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice"}
+      }
+    }
+  ]
+}

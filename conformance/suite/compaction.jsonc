@@ -1,0 +1,71 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "compaction",
+  "tests": [
+    {
+      "id": "compact-removes-tombstones",
+      "description": "Compact removes tombstones from file",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "delete", "key": "alice", "returns": true},
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 1},
+        {"op": "get", "key": "bob", "returns": {"id": "bob", "v": 2}}
+      ]
+    },
+    {
+      "id": "compact-empty",
+      "description": "Compact on empty table produces empty file",
+      "key": "id",
+      "steps": [
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 0}
+      ]
+    },
+    {
+      "id": "compact-preserves-records",
+      "description": "Compact preserves all current records",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "carol", "v": 3}, "returns": null},
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 3},
+        {"op": "all", "returns": [
+          {"id": "alice", "v": 1},
+          {"id": "bob", "v": 2},
+          {"id": "carol", "v": 3}
+        ]}
+      ]
+    },
+    {
+      "id": "compact-removes-history",
+      "description": "Compact keeps only latest version of each record",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "v": 3}, "returns": null},
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 1},
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 3}}
+      ]
+    },
+    {
+      "id": "compact-only-tombstones",
+      "description": "Compact on table containing only tombstones produces empty file",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "delete", "key": "alice", "returns": true},
+        {"op": "delete", "key": "bob", "returns": true},
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 0}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1274 @@
+<pre class='metadata'>
+Title: JSONLT 1.0 Conformance Test Suite
+Shortname: JSONLT-Tests
+Abstract: This document describes the conformance test suite for the JSONLT specification. The test suite provides language-agnostic test cases for verifying that implementations correctly parse, serialize, and compute state according to the JSONLT specification.
+Status: LS
+Level: none
+URL: https://spec.jsonlt.org/tests/
+Canonical URL: https://spec.jsonlt.org/tests/
+Editor: Tony Burns, tony@tonyburns.net
+Date: 2025-12-22
+Markup Shorthands: markdown yes
+Repository: jsonlt/jsonlt
+Local Boilerplate: copyright yes, conformance no
+Complain About: accidental-2119 yes
+</pre>
+
+<pre class="include">
+path: copyright.include
+</pre>
+
+<h2 id="boilerplate-conformance" class="no-num no-toc">Conformance</h2>
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
+"SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
+interpreted as described in BCP 14 [[!RFC2119]] [[!RFC8174]] when, and only
+when, they appear in all capitals, as shown here.
+
+Terminology from JSONLT {#spec-terminology}
+============================================
+
+This document uses terminology defined in [[!JSONLT]]. All terms used from the main specification retain their normative definitions as specified there; this document does not redefine them. When this document refers to concepts such as "logical state" or "record," those terms have the precise meanings established in [[!JSONLT]].
+
+Terms from the WHATWG Infra Standard are used as specified in [[!JSONLT]] Section 2.
+
+The following terms are referenced from [[!JSONLT]]:
+
+* **key** ([[!JSONLT]] §key): identifies a record within a table
+* **record** ([[!JSONLT]] §record): a JSON object containing key fields
+* **tombstone** ([[!JSONLT]] §tombstone): marks deletion of a record
+* **operation** ([[!JSONLT]] §operation): an upsert or delete transformation
+* **logical state** ([[!JSONLT]] §logical-state): map from keys to records
+* **header** ([[!JSONLT]] §header): optional metadata at file start
+* **key specifier** ([[!JSONLT]] §key-specifier): defines how to extract keys
+* **table** ([[!JSONLT]] §table): the central JSONLT construct
+* **transaction** ([[!JSONLT]] §transaction): context for atomic operations
+* **conforming parser** ([[!JSONLT]] §conformance-parser): reads JSONLT files
+* **conforming generator** ([[!JSONLT]] §conformance-generator): writes JSONLT files
+* **deterministic serialization** ([[!JSONLT]] §deterministic-serialization): consistent JSON output
+
+See [[!JSONLT]] §exceptions for error types: parse error, key error, conflict error, limit error, I/O error, lock error, and transaction error.
+
+Introduction {#intro}
+=====================
+
+<em>This section is non-normative.</em>
+
+This document describes the conformance test suite for the [[!JSONLT]] specification. The test suite is designed to be language-agnostic. Test cases are expressed as JSONC files (JSON with Comments) that can be consumed by any implementation through a test harness.
+
+The conformance suite focuses on interoperability: can a file written by one implementation be correctly read by another? Tests cover file format parsing, state computation, serialization determinism, and the core CRUD operations.
+
+Tests are declarative data, not executable code. Each implementation writes a harness that reads test files and maps them to the implementation's API. This declarative approach keeps the test suite small and unambiguous while allowing implementations flexibility in how they run tests.
+
+The suite intentionally avoids testing implementation-specific features like query languages, indexing, or performance characteristics. Those belong in implementation-specific test suites.
+
+Terminology {#terminology}
+==========================
+
+A <dfn>test case</dfn> is a JSON object within a test file's `tests` array that specifies inputs and expected outputs for a single verification.
+
+A <dfn>test harness</dfn> is implementation-specific code that loads test files, executes [=test cases=] against the implementation under test, and reports results.
+
+A <dfn>test suite</dfn> is a JSONC file containing a collection of related [=test cases=] for a specific category of behavior.
+
+A <dfn>test file</dfn> is a JSONC document containing a [=test suite=]. The top-level object includes metadata fields (`$schema`, `suite`) and a `tests` array.
+
+A <dfn>container object</dfn> is the top-level JSON object in a [=test file=].
+
+When a [=test case=] specifies <dfn id="expect-accept" export>`expect`: "accept"</dfn>, the implementation MUST successfully process the input and produce the expected logical state or return value.
+
+When a [=test case=] specifies <dfn id="expect-reject" export>`expect`: "reject"</dfn>, the implementation MUST reject the input with an error in the specified category.
+
+Test files MUST be valid [[!JSONC]] documents (JSON with Comments). [=Test harnesses=] MUST strip comments before parsing as [[!RFC8259]] JSON.
+
+Consuming the test suite {#consuming}
+=====================================
+
+<em>This section is non-normative.</em>
+
+Implementations can consume the test suite in several ways.
+
+Git submodule {#consuming-submodule}
+------------------------------------
+
+<!-- vale JSONLTSpec.RFC2119-uppercase = NO -->
+<p>Git submodule is recommended for reference implementations. Pin to a tagged release for stability:</p>
+<!-- vale JSONLTSpec.RFC2119-uppercase = YES -->
+
+```
+git submodule add https://github.com/jsonlt/jsonlt.git vendor/jsonlt-spec
+```
+
+Direct download {#consuming-download}
+-------------------------------------
+
+Direct download works for CI environments. Tagged releases are available at:
+
+```
+https://github.com/jsonlt/jsonlt/releases
+```
+
+The test files are self-contained JSONC with no external dependencies.
+
+Test file structure {#structure}
+================================
+
+Each [=test file=] contains an array of [=test cases=] wrapped in a [=container object=]:
+
+```json
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "state",
+  "tests": [...]
+}
+```
+
+The `$schema` field references the JSON Schema for validation. The `suite` field identifies the test category (also called the "suite name" in file organization).
+
+Test organization {#organization-model}
+=======================================
+
+<em>This section is non-normative.</em>
+
+The test suite follows a structure inspired by the [[JSON-SCHEMA-TEST-SUITE]]. Tests are organized by the feature or behavior being tested, not by implementation profile.
+
+Directory structure {#directory-structure}
+------------------------------------------
+
+```
+conformance/
+├── index.bs               # This document
+├── schemas/
+│   └── v1/
+│       ├── suite.schema.jsonc   # JSON Schema for test files
+│       └── report.schema.jsonc  # JSON Schema for conformance reports
+└── suite/
+    ├── format.jsonc       # Physical format parsing tests
+    ├── state.jsonc        # Logical state computation tests
+    ├── keys.jsonc         # Key validation and ordering tests
+    ├── header.jsonc       # Header parsing tests
+    ├── ops.jsonc          # API operation tests
+    ├── recovery.jsonc     # Recovery from non-conforming input (optional)
+    ├── transactions.jsonc # Transaction operations (optional)
+    ├── compaction.jsonc   # Compaction operations (optional)
+    └── generator.jsonc    # Generator output conformance (optional)
+```
+
+Test categories {#categories}
+=============================
+
+format {#category-format}
+-------------------------
+
+Tests that verify correct parsing and generation of JSONLT files according to the physical format rules in [[!JSONLT]] §physical-format.
+
+state {#category-state}
+-----------------------
+
+Tests that verify the "compute the logical state" algorithm defined in [[!JSONLT]] §algo-logical-state produces correct results. These test the core append-only log semantics where operations are replayed in sequence.
+
+keys {#category-keys}
+---------------------
+
+Tests for key validation, extraction, comparison, and ordering as defined in [[!JSONLT]] §key.
+
+header {#category-header}
+-------------------------
+
+Tests for header parsing and key specifier validation as defined in [[!JSONLT]] §header.
+
+ops {#category-ops}
+-------------------
+
+Tests for the API operations defined in [[!JSONLT]] §api: `get`, `put`, `delete`, `has`, `all`, `keys`, `count`, `clear`.
+
+recovery (optional) {#category-recovery}
+----------------------------------------
+
+Tests for optional recovery from non-conforming input. Per [[!JSONLT]] §conformance-parser, parsers MAY accept non-conforming input and recover gracefully. This includes:
+
+* Files missing a trailing newline
+* Empty lines
+* CRLF line endings
+* BOM at file start
+* Tombstones with extra fields
+
+transactions (optional) {#category-transactions}
+------------------------------------------------
+
+Tests for optional transaction operations as defined in [[!JSONLT]] §api-transaction. Transactions provide snapshot isolation and optimistic concurrency control.
+
+compaction (optional) {#category-compaction}
+--------------------------------------------
+
+Tests for optional compaction operations as defined in [[!JSONLT]] §algo-compact. Compaction rewrites a file as a minimal snapshot.
+
+generator (optional) {#category-generator}
+------------------------------------------
+
+Tests that verify generator (writer) implementations produce conforming output according to [[!JSONLT]] §conformance-generator. These tests validate:
+
+* **Deterministic serialization**: Keys within JSON objects are sorted lexicographically by Unicode code point per [[!JSONLT]] §deterministic-serialization
+* **Line endings**: Output uses U+000A LINE FEED only (no CRLF)
+* **BOM prohibition**: Output does not begin with a byte order mark
+* **Trailing newline**: Every line, including the last, ends with U+000A
+* **Tombstone format**: Tombstones contain exactly two fields: the key field(s) and `$deleted`
+
+Generator tests use a round-trip structure: the test provides initial state, the generator writes a file, and the harness verifies the output conforms to physical format requirements. See [[#tests-generator]] for test structure details.
+
+Conformance profiles {#profiles}
+=================================
+
+The [[!JSONLT]] specification defines two conformance profiles:
+
+* **Parser**: Implementations that read JSONLT files (see [[!JSONLT]] §conformance-parser)
+* **Generator**: Implementations that write JSONLT files (see [[!JSONLT]] §conformance-generator)
+
+<!-- vale JSONLTSpec.RFC2119-uppercase = NO -->
+<p>An implementation MAY conform as a parser, generator, or both.</p>
+<!-- vale JSONLTSpec.RFC2119-uppercase = YES -->
+
+Profile applicability by test category {#profile-applicability}
+---------------------------------------------------------------
+
+The following table specifies which profiles each test category applies to:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Test Category</th>
+      <th>Parser</th>
+      <th>Generator</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`suite/format.jsonc`</td>
+      <td>✓</td>
+      <td></td>
+      <td>Parsing and rejection tests</td>
+    </tr>
+    <tr>
+      <td>`suite/state.jsonc`</td>
+      <td>✓</td>
+      <td></td>
+      <td>State computation</td>
+    </tr>
+    <tr>
+      <td>`suite/keys.jsonc`</td>
+      <td>✓</td>
+      <td></td>
+      <td>Key validation</td>
+    </tr>
+    <tr>
+      <td>`suite/header.jsonc`</td>
+      <td>✓</td>
+      <td></td>
+      <td>Header parsing</td>
+    </tr>
+    <tr>
+      <td>`suite/ops.jsonc`</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>Requires read and write capability</td>
+    </tr>
+    <tr>
+      <td>`suite/recovery.jsonc`</td>
+      <td>✓</td>
+      <td></td>
+      <td>Parsers supporting recovery (optional)</td>
+    </tr>
+    <tr>
+      <td>`suite/transactions.jsonc`</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>Requires read and write capability (optional)</td>
+    </tr>
+    <tr>
+      <td>`suite/compaction.jsonc`</td>
+      <td>✓</td>
+      <td>✓</td>
+      <td>Requires read and write capability (optional)</td>
+    </tr>
+    <tr>
+      <td>`suite/generator.jsonc`</td>
+      <td></td>
+      <td>✓</td>
+      <td>Generator output conformance (optional)</td>
+    </tr>
+  </tbody>
+</table>
+
+Implementations SHOULD skip tests for categories that do not apply to their profile. For example, a parser-only implementation SHOULD skip `ops.jsonc` tests that require write operations.
+
+Note: The test files themselves do not contain profile metadata. [=Test harnesses=] SHOULD use this applicability table to determine which tests to run based on their claimed conformance profile(s).
+
+Optional features {#optional-features}
+--------------------------------------
+
+The `suite/` directory contains both mandatory and optional test files. Per [[!JSONLT]] §claiming-conformance, implementations MAY support these optional features:
+
+* Recovery from non-conforming input (`suite/recovery.jsonc`)
+* Transaction operations (`suite/transactions.jsonc`)
+* Compaction (`suite/compaction.jsonc`)
+* Generator output conformance (`suite/generator.jsonc`)
+
+Note: Per [[!JSONLT]] §transaction, transaction support requires both parser and generator capabilities. Implementations claiming transaction support in their conformance reports MUST claim both the "parser" and "generator" profiles.
+
+Implementations SHOULD skip tests for features they do not support.
+
+Common test fields {#common-fields}
+===================================
+
+Many fields appear across multiple test categories. This section defines them once; category-specific sections reference these definitions.
+
+Mandatory fields {#common-mandatory}
+-------------------------------------
+
+All test cases include:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`id`</td>
+      <td>string</td>
+      <td>Unique identifier within the suite (e.g., `"state-upsert-overwrite"`)</td>
+    </tr>
+    <tr>
+      <td>`description`</td>
+      <td>string</td>
+      <td>Human-readable description of what the test verifies</td>
+    </tr>
+  </tbody>
+</table>
+
+Input fields {#common-input}
+----------------------------
+
+Tests that parse file content use these fields:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`key`</td>
+      <td>string or array</td>
+      <td>Key specifier for opening the table</td>
+    </tr>
+    <tr>
+      <td>`input`</td>
+      <td>string or array</td>
+      <td>File content. When an array, elements are joined by U+000A LINE FEED with a trailing U+000A appended. An empty array produces an empty string.</td>
+    </tr>
+    <tr>
+      <td>`inputBase64`</td>
+      <td>string</td>
+      <td>Alternative to `input` for binary content, encoded using standard Base64 per [[!RFC4648]] Section 4, with padding. Either `input` or `inputBase64` MUST be present, but not both.</td>
+    </tr>
+  </tbody>
+</table>
+
+Result fields {#common-result}
+------------------------------
+
+Tests that verify parsing outcomes use these fields:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`expect`</td>
+      <td>string</td>
+      <td>`"accept"` or `"reject"`. See [[#terminology]] for behavior definitions.</td>
+    </tr>
+    <tr>
+      <td>`error`</td>
+      <td>string</td>
+      <td>Expected error category if `expect` is `"reject"`. See [[#errors]].</td>
+    </tr>
+    <tr>
+      <td>`state`</td>
+      <td>object</td>
+      <td>Expected logical state (map from serialized key to record). This field corresponds to the "logical state" defined in [[!JSONLT]] §logical-state. See [[#key-serialization]] for key format.</td>
+    </tr>
+  </tbody>
+</table>
+
+Test structures by category {#test-structures}
+==============================================
+
+format tests {#tests-format}
+----------------------------
+
+<div class="example">
+Example with string input (includes explicit newline):
+
+```json
+{
+  "id": "format-invalid-json",
+  "description": "Invalid JSON is rejected",
+  "key": "id",
+  "input": "{\"id\": 1, \"name\": }\n",
+  "expect": "reject",
+  "error": "PARSE_ERROR"
+}
+```
+
+When `input` is an array, lines are joined automatically (see the `input` field description below).
+</div>
+
+<div class="example">
+Example using `inputBase64` for content with embedded null bytes:
+
+```json
+{
+  "id": "format-embedded-null",
+  "description": "Embedded null byte in JSON is rejected",
+  "key": "id",
+  "inputBase64": "eyJpZCI6IDEsICJuYW1lIjogInRlc3QAaW52YWxpZCJ9Cg==",
+  "expect": "reject",
+  "error": "PARSE_ERROR"
+}
+```
+
+Note: The Base64 decodes to `{"id": 1, "name": "test\x00invalid"}\n` (with a null byte).
+</div>
+
+Format tests use the common input fields (`key`, `input`, `inputBase64`) and result fields (`expect`, `error`, `state`) defined in [[#common-fields]].
+
+Field constraints for format tests:
+
+* Either `input` or `inputBase64` MUST be present, but not both.
+* When `expect` is `"accept"`, the `error` field SHALL NOT be present.
+* When `expect` is `"reject"`, the `state` field SHALL NOT be present.
+
+state tests {#tests-state}
+--------------------------
+
+<div class="example">
+```json
+{
+  "id": "state-upsert-overwrite",
+  "description": "Later upsert overwrites earlier record with same key",
+  "key": "id",
+  "input": [
+    "{\"id\": \"a\", \"v\": 1}",
+    "{\"id\": \"a\", \"v\": 2}"
+  ],
+  "state": {
+    "a": {"id": "a", "v": 2}
+  }
+}
+```
+</div>
+
+State tests use `key`, `input`, and `state` from [[#common-fields]]. All state tests expect acceptance (no `expect` field needed). These tests verify the "compute the logical state" algorithm ([[!JSONLT]] §algo-logical-state).
+
+ops tests {#tests-ops}
+----------------------
+
+Operation tests use a sequence of steps:
+
+<div class="example">
+```json
+{
+  "id": "ops-put-get-delete",
+  "description": "Basic put, get, delete sequence",
+  "key": "id",
+  "steps": [
+    {"op": "put", "record": {"id": "a", "v": 1}, "returns": null},
+    {"op": "get", "key": "a", "returns": {"id": "a", "v": 1}},
+    {"op": "has", "key": "a", "returns": true},
+    {"op": "delete", "key": "a", "returns": true},
+    {"op": "get", "key": "a", "returns": null},
+    {"op": "has", "key": "a", "returns": false}
+  ]
+}
+```
+</div>
+
+Each step specifies an operation and its expected return value. The `steps` array MUST contain at least one step.
+
+### Supported operations ### {#ops-supported}
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Operation</th>
+      <th>Parameters</th>
+      <th>Returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`put`</td>
+      <td>`record`</td>
+      <td>`null`</td>
+    </tr>
+    <tr>
+      <td>`get`</td>
+      <td>`key`</td>
+      <td>record or `null`</td>
+    </tr>
+    <tr>
+      <td>`has`</td>
+      <td>`key`</td>
+      <td>boolean</td>
+    </tr>
+    <tr>
+      <td>`delete`</td>
+      <td>`key`</td>
+      <td>boolean (existed)</td>
+    </tr>
+    <tr>
+      <td>`all`</td>
+      <td>—</td>
+      <td>array of records (key order)</td>
+    </tr>
+    <tr>
+      <td>`keys`</td>
+      <td>—</td>
+      <td>array of keys (key order)</td>
+    </tr>
+    <tr>
+      <td>`count`</td>
+      <td>—</td>
+      <td>integer</td>
+    </tr>
+    <tr>
+      <td>`clear`</td>
+      <td>—</td>
+      <td>`null`</td>
+    </tr>
+  </tbody>
+</table>
+
+Note: The `compact` operation is tested separately in [[#category-compaction]]. It can appear in ops tests for implementations that support compaction.
+
+<!-- vale JSONLTSpec.RFC2119-uppercase = NO -->
+<p>For operations that should fail, use `error` instead of `returns`:</p>
+<!-- vale JSONLTSpec.RFC2119-uppercase = YES -->
+
+<div class="example">
+```json
+{"op": "put", "record": {"id": null}, "error": "KEY_ERROR"}
+```
+</div>
+
+transactions tests {#tests-transactions}
+----------------------------------------
+
+Transaction tests specify setup, transaction operations, and post-commit verification:
+
+<div class="example">
+```json
+{
+  "id": "tx-isolation",
+  "description": "Reads within transaction see transaction writes",
+  "key": "id",
+  "setup": [
+    {"op": "put", "record": {"id": "a", "v": 1}}
+  ],
+  "transaction": [
+    {"op": "put", "record": {"id": "a", "v": 2}},
+    {"op": "get", "key": "a", "returns": {"id": "a", "v": 2}}
+  ],
+  "commit": true,
+  "after": [
+    {"op": "get", "key": "a", "returns": {"id": "a", "v": 2}}
+  ]
+}
+```
+</div>
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`setup`</td>
+      <td>array</td>
+      <td>Operations before transaction starts</td>
+    </tr>
+    <tr>
+      <td>`transaction`</td>
+      <td>array</td>
+      <td>Operations within the transaction</td>
+    </tr>
+    <tr>
+      <td>`commit`</td>
+      <td>boolean</td>
+      <!-- vale JSONLTSpec.RFC2119-uppercase = NO -->
+      <td>Whether commit should succeed (default: `true`)</td>
+      <!-- vale JSONLTSpec.RFC2119-uppercase = YES -->
+    </tr>
+    <tr>
+      <td>`error`</td>
+      <td>string</td>
+      <td>Expected error if `commit` is `false`</td>
+    </tr>
+    <tr>
+      <td>`after`</td>
+      <td>array</td>
+      <td>Operations after commit (verify final state)</td>
+    </tr>
+  </tbody>
+</table>
+
+header tests {#tests-header}
+----------------------------
+
+<div class="example">
+```json
+{
+  "id": "header-key-mismatch",
+  "description": "Opening with mismatched key specifier fails",
+  "input": [
+    "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+    "{\"id\": 1, \"name\": \"test\"}"
+  ],
+  "openWith": {"key": "name"},
+  "expect": "reject",
+  "error": "KEY_ERROR"
+}
+```
+</div>
+
+Header tests use `input`, `expect`, `error`, and `state` from [[#common-fields]], plus:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`openWith`</td>
+      <td>object</td>
+      <td>Options passed when opening (e.g., `{"key": "..."}`). When absent, the harness opens with default options (key from header or no key specifier).</td>
+    </tr>
+  </tbody>
+</table>
+
+keys tests {#tests-keys}
+------------------------
+
+Key validation and ordering tests:
+
+<div class="example">
+```json
+{
+  "id": "key-null-rejected",
+  "description": "Null key values are rejected",
+  "key": "id",
+  "input": ["{\"id\": null, \"name\": \"test\"}"],
+  "expect": "reject",
+  "error": "KEY_ERROR"
+}
+```
+</div>
+
+<div class="example">
+```json
+{
+  "id": "key-order-mixed",
+  "description": "Integers sort before strings",
+  "key": "id",
+  "input": [
+    "{\"id\": \"b\", \"v\": 1}",
+    "{\"id\": 2, \"v\": 2}",
+    "{\"id\": \"a\", \"v\": 3}",
+    "{\"id\": 1, \"v\": 4}"
+  ],
+  "keys": [1, 2, "a", "b"]
+}
+```
+</div>
+
+Keys tests use `key`, `input`, `expect`, `error`, and `state` from [[#common-fields]]. Additionally, ordering tests include:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`keys`</td>
+      <td>array</td>
+      <td>Expected key order from `keys()` operation</td>
+    </tr>
+  </tbody>
+</table>
+
+recovery tests {#tests-recovery}
+--------------------------------
+
+Recovery tests are in `suite/recovery.jsonc`. They verify that conforming parsers implementing optional recovery can handle non-conforming input gracefully and produce the expected logical state. Recovery tests use `key`, `input`, and `state` from [[#common-fields]].
+
+<div class="example">
+```json
+{
+  "id": "recovery-truncated-line",
+  "description": "Parser ignores truncated final line without newline (SHOULD per spec)",
+  "key": "id",
+  "input": "{\"id\": 1, \"v\": 1}\n{\"id\": 2, \"v\":",
+  "state": {
+    "1": {"id": 1, "v": 1}
+  }
+}
+```
+</div>
+
+These tests verify parsers can recover from common non-conforming situations like CRLF line endings, empty lines, BOM markers, and truncated files.
+
+Implementations that do not support recovery (i.e., strict parsers that reject all non-conforming input) SHOULD skip recovery tests and report the status as "skip" with a reason such as "recovery not implemented". Failing recovery tests is not a conformance violation for strict parsers; the recovery behaviors are specified as SHOULD in [[!JSONLT]] §conformance-parser.
+
+generator tests {#tests-generator}
+----------------------------------
+
+Generator tests verify that conforming generator implementations produce conforming output using deterministic serialization. Unlike other test categories that validate parsing, these tests validate serialization behavior.
+
+<div class="example">
+```json
+{
+  "id": "generator-no-crlf",
+  "description": "Generator uses LF line endings, not CRLF",
+  "key": "id",
+  "state": {
+    "a": {"id": "a", "v": 1}
+  },
+  "outputNotMatches": "\\r\\n"
+}
+```
+</div>
+
+Generator tests use `key` and `state` from [[#common-fields]] to specify what to write, plus output verification fields:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`outputMatches`</td>
+      <td>string</td>
+      <td>Regex pattern the output MUST match</td>
+    </tr>
+    <tr>
+      <td>`outputNotMatches`</td>
+      <td>string</td>
+      <td>Regex pattern the output MUST NOT match</td>
+    </tr>
+    <tr>
+      <td>`outputExact`</td>
+      <td>string</td>
+      <td>Exact expected output (byte-for-byte comparison)</td>
+    </tr>
+    <tr>
+      <td>`surrogateCodepoint`</td>
+      <td>string</td>
+      <td>Unicode code point in U+XXXX format (e.g., `"U+D800"`) specifying an unpaired surrogate to include in a test record. The [=test harness=] MUST construct a record containing a string value with this surrogate code point and verify the generator rejects it. Used only for surrogate rejection tests; mutually exclusive with `state` and `record`.</td>
+    </tr>
+    <tr>
+      <td>`record`</td>
+      <td>object</td>
+      <td>A single record to attempt to write. Used for rejection tests: the [=test harness=] MUST attempt to put this record and verify the generator returns an error. Used for testing generator-side validation (e.g., `$`-prefixed field rejection); mutually exclusive with `state` and `surrogateCodepoint`.</td>
+    </tr>
+  </tbody>
+</table>
+
+Field constraints for generator tests:
+
+* Each test with `state` MUST specify at least one of `outputMatches`, `outputNotMatches`, or `outputExact`.
+* Tests MAY combine multiple output constraints; the harness MUST verify all specified constraints.
+* Tests with `surrogateCodepoint` or `record` MUST specify `expect` and `error`; they MUST NOT specify `state` or output constraints.
+
+Key serialization in state maps {#key-serialization}
+====================================================
+
+The `state` field maps serialized keys to expected records. Keys are serialized as follows:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Key type</th>
+      <th>Serialization</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>String</td>
+      <td>The string value</td>
+      <td>`"alice"`</td>
+    </tr>
+    <tr>
+      <td>Integer</td>
+      <td>Canonical decimal representation</td>
+      <td>`"42"`, `"-7"`</td>
+    </tr>
+    <tr>
+      <td>Tuple</td>
+      <td>Compact JSON array (no whitespace)</td>
+      <td>`"[\"org\",\"user1\"]"`</td>
+    </tr>
+  </tbody>
+</table>
+
+Serialization rules:
+
+* [=Test harnesses=] SHALL serialize integer keys as their canonical decimal representation without leading zeros, positive signs, or fractional parts. Negative integers include a leading minus sign.
+* [=Test harnesses=] SHALL serialize tuple keys as compact JSON arrays with no whitespace between elements. [=Test harnesses=] SHALL serialize elements according to their type.
+* [=Test harnesses=] SHALL serialize string keys containing characters that require JSON escaping (e.g., `"`, `\`, control characters) with those escapes.
+
+<div class="example">
+Example with integer keys:
+
+```json
+{
+  "state": {
+    "1": {"id": 1, "name": "first"},
+    "2": {"id": 2, "name": "second"}
+  }
+}
+```
+</div>
+
+<div class="example">
+Example with tuple keys:
+
+```json
+{
+  "state": {
+    "[\"acme\",1]": {"org": "acme", "id": 1, "name": "alice"},
+    "[\"acme\",2]": {"org": "acme", "id": 2, "name": "bob"}
+  }
+}
+```
+</div>
+
+Error categories {#errors}
+==========================
+
+Tests that expect errors specify one of these categories:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`PARSE_ERROR`</td>
+      <td>
+        Malformed input per [[!JSONLT]] §exception-parse:
+        <ul>
+          <li>Invalid JSON syntax</li>
+          <li>Record is not a JSON object</li>
+          <li>Duplicate keys within a JSON object</li>
+          <li>Invalid `$deleted` value (not `true`)</li>
+          <li>Invalid header structure</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>`KEY_ERROR`</td>
+      <td>
+        Key validation failure per [[!JSONLT]] §exception-key:
+        <ul>
+          <li>Missing key field in record</li>
+          <li>Invalid key type (not string, integer, or tuple)</li>
+          <li>Key specifier mismatch with header</li>
+          <li>Empty tuple key</li>
+          <li>Duplicate fields in key specifier</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>`IO_ERROR`</td>
+      <td>File system operation failure per [[!JSONLT]] §exception-io</td>
+    </tr>
+    <tr>
+      <td>`LOCK_ERROR`</td>
+      <td>Lock acquisition timeout per [[!JSONLT]] §exception-lock</td>
+    </tr>
+    <tr>
+      <td>`TRANSACTION_ERROR`</td>
+      <td>
+        Transaction failure per [[!JSONLT]] §exception-transaction:
+        <ul>
+          <li>Nested transaction attempt</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>`CONFLICT_ERROR`</td>
+      <td>
+        Write-write conflict error per [[!JSONLT]] §exception-transaction. This is a specific type of transaction failure that occurs when a transaction commit detects that another process has modified a key that the transaction also modified. [=Test harnesses=] MAY map this to `TRANSACTION_ERROR` if their implementation does not distinguish conflict errors from other transaction errors.
+      </td>
+    </tr>
+    <tr>
+      <td>`LIMIT_ERROR`</td>
+      <td>
+        Implementation limit exceeded per [[!JSONLT]] §exception-limit:
+        <ul>
+          <li>Key length exceeds maximum</li>
+          <li>Record size exceeds maximum</li>
+          <li>JSON nesting depth exceeds maximum</li>
+          <li>Tuple key element count exceeds 16</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+[=Test harnesses=] SHOULD map implementation-specific error types to these categories.
+
+Comparison rules {#comparison}
+==============================
+
+When comparing actual results to expected values, [=test harnesses=] SHALL apply these rules:
+
+* [=Test harnesses=] SHALL compare records for deep equality. Field order SHALL NOT affect equality.
+* [=Test harnesses=] SHALL compare numeric values by mathematical value, not representation. `1`, `1.0`, and `1e0` are equal.
+* [=Test harnesses=] MUST match null values exactly. A missing field is NOT equal to a field with value `null`.
+* [=Test harnesses=] SHALL compare arrays element-by-element in order.
+
+Writing a test harness {#harness}
+=================================
+
+A conforming [=test harness=]:
+
+1. SHALL load [=test suites=] from this directory
+2. SHALL validate each [=test suite=] against `schemas/v1/suite.schema.jsonc` before execution
+3. SHALL set up the environment for each [=test case=] (creating temporary files when the test requires file input)
+4. SHALL execute [=test cases=] according to the suite's category
+5. SHALL compare results using the comparison rules defined in [[#comparison]]
+6. SHALL report pass, fail, or skip for each [=test case=]
+7. SHOULD skip [=test cases=] for optional features the implementation does not support
+
+Test IDs SHOULD be unique within a [=test suite=]. [=Test cases=] have no interdependencies and [=test harnesses=] MAY execute them in any order.
+
+<div class="example">
+Example harness pseudocode (Python-style syntax for readability; illustrative, not normative):
+
+```python
+def run_suite(suite_file, implementation):
+    """Execute all tests in a suite file."""
+    category = suite_file["suite"]
+    for test in suite_file["tests"]:
+        result = run_test(category, test, implementation)
+        report(test["id"], result)
+
+def run_test(category, test, implementation):
+    """Dispatch to category-specific test runner."""
+    match category:
+        case "format":
+            return run_format_test(test, implementation)
+        case "state":
+            return run_state_test(test, implementation)
+        case "keys":
+            return run_keys_test(test, implementation)
+        case "header":
+            return run_header_test(test, implementation)
+        case "ops":
+            return run_ops_test(test, implementation)
+        case "transactions":
+            return run_transactions_test(test, implementation)
+        case "recovery":
+            return run_recovery_test(test, implementation)
+        case "generator":
+            return run_generator_test(test, implementation)
+
+def run_state_test(test, impl):
+    """Execute a state test and compare results."""
+    content = construct_input(test.get("input"))
+    with temp_file(content) as path:
+        table = impl.open(path, key=test["key"])
+        actual_state = {}
+        for record in table.all():
+            key = extract_key(record, test["key"])
+            actual_state[serialize_key(key)] = record
+        return PASS if actual_state == test["state"] else FAIL
+```
+</div>
+
+Versioning {#versioning}
+========================
+
+The test suite is versioned alongside the specification. The `$schema` URLs include the version:
+
+```
+https://spec.jsonlt.org/conformance/v1/suite.schema.json
+https://spec.jsonlt.org/conformance/v1/report.schema.json
+```
+
+When the spec changes in ways that affect conformance, the test suite version increments. Implementations can pin to a specific version for stability.
+
+Conformance reporting {#reporting}
+==================================
+
+Implementations MAY produce conformance reports documenting their test results. A <dfn>conformance report</dfn> is a JSON document conforming to the report schema that captures the implementation's test results in a machine-readable format.
+
+Report structure {#report-structure}
+------------------------------------
+
+A [=conformance report=] includes:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Required</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`$schema`</td>
+      <td>string</td>
+      <td>yes</td>
+      <td>Schema URL: `https://spec.jsonlt.org/conformance/v1/report.schema.json`</td>
+    </tr>
+    <tr>
+      <td>`implementation`</td>
+      <td>object</td>
+      <td>yes</td>
+      <td>Name, version, language, and optional URL of the implementation</td>
+    </tr>
+    <tr>
+      <td>`profile`</td>
+      <td>array</td>
+      <td>yes</td>
+      <td>Conformance profiles claimed: `["parser"]`, `["generator"]`, or `["parser", "generator"]`</td>
+    </tr>
+    <tr>
+      <td>`optionalFeatures`</td>
+      <td>array</td>
+      <td>no</td>
+      <td>Optional features supported: `"recovery"`, `"transactions"`, `"compaction"`</td>
+    </tr>
+    <tr>
+      <td>`suiteVersion`</td>
+      <td>string</td>
+      <td>yes</td>
+      <td>Version of the test suite (e.g., `"v1.0.0"`)</td>
+    </tr>
+    <tr>
+      <td>`timestamp`</td>
+      <td>string</td>
+      <td>yes</td>
+      <td>ISO 8601 timestamp when the report was generated</td>
+    </tr>
+    <tr>
+      <td>`environment`</td>
+      <td>object</td>
+      <td>no</td>
+      <td>OS, architecture, and runtime information</td>
+    </tr>
+    <tr>
+      <td>`summary`</td>
+      <td>object</td>
+      <td>no</td>
+      <td>Aggregate counts: `total`, `passed`, `failed`, `skipped`</td>
+    </tr>
+    <tr>
+      <td>`results`</td>
+      <td>array</td>
+      <td>yes</td>
+      <td>Per-suite test results</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="example">
+Example conformance report:
+
+```json
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/report.schema.json",
+  "implementation": {
+    "name": "jsonlt-py",
+    "version": "1.2.0",
+    "language": "Python",
+    "url": "https://github.com/example/jsonlt-py"
+  },
+  "profile": ["parser", "generator"],
+  "optionalFeatures": ["transactions"],
+  "suiteVersion": "v1.0.0",
+  "timestamp": "2025-01-15T14:30:00Z",
+  "environment": {
+    "os": "Linux",
+    "arch": "x86_64",
+    "runtime": "Python 3.12.1"
+  },
+  "summary": {
+    "total": 150,
+    "passed": 148,
+    "failed": 0,
+    "skipped": 2
+  },
+  "results": [
+    {
+      "suite": "format",
+      "summary": {"total": 25, "passed": 25, "failed": 0, "skipped": 0},
+      "tests": [
+        {"id": "format-valid-single-record", "status": "pass", "duration": 1.2},
+        {"id": "format-invalid-json", "status": "pass", "duration": 0.8}
+      ]
+    }
+  ]
+}
+```
+</div>
+
+Test result status {#result-status}
+-----------------------------------
+
+Each test result specifies one of:
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`pass`</td>
+      <td>The implementation produced the expected result</td>
+    </tr>
+    <tr>
+      <td>`fail`</td>
+      <td>The implementation produced an unexpected result</td>
+    </tr>
+    <tr>
+      <td>`skip`</td>
+      <td>The test was not executed (e.g., unsupported feature, not applicable to profile)</td>
+    </tr>
+  </tbody>
+</table>
+
+Failed tests SHOULD include `message`, `expected`, and `actual` fields to aid debugging.
+
+Report validation {#report-validation}
+--------------------------------------
+
+[=Conformance reports=] MUST validate against `schemas/v1/report.schema.jsonc`. Implementations that generate reports SHOULD validate them before publishing.
+
+Why `find` and `findOne` are excluded {#find-exclusion}
+=======================================================
+
+<em>This section is non-normative.</em>
+
+The [[!JSONLT]] specification defines `find(predicate)` and `findOne(predicate)` operations, but this conformance suite intentionally excludes them.
+
+The predicate parameter is a function, which cannot be expressed in a language-agnostic JSON format without defining a query language. Defining a query language (even a minimal one) adds significant complexity to both the test format and every harness implementation.
+
+For conformance purposes, what matters is that `find` iterates records in key order and applies the predicate correctly. This can be verified indirectly through `all()` (which returns records in key order) and implementation-specific tests.
+
+<!-- vale JSONLTSpec.RFC2119-uppercase = NO -->
+<p>Implementations that want to provide a query language (like MongoDB-style operators) should test that functionality in their own test suites.</p>
+<!-- vale JSONLTSpec.RFC2119-uppercase = YES -->
+
+Contributing tests {#contributing}
+==================================
+
+<em>This section is non-normative.</em>
+
+New tests are welcome. When adding tests:
+
+1. Use a unique `id` following the pattern `{category}-{description}`
+2. Write a clear `description` explaining what the test verifies
+3. Reference the relevant section of the spec in a comment if helpful
+4. Ensure the test is minimal (tests one thing)
+5. Validate against `schemas/v1/suite.schema.jsonc` before submitting
+
+Tests that expose ambiguities or edge cases in the spec are especially valuable—they help clarify the specification for all implementations.
+
+<pre class="biblio">
+{
+  "JSONC": {
+    "authors": ["DecimalTurn"],
+    "title": "JSONC Specification",
+    "href": "https://jsonc.org/",
+    "publisher": "jsonc.org",
+    "status": "Draft"
+  },
+  "JSONLT": {
+    "authors": ["Tony Burns"],
+    "title": "JSON Lines Table (JSONLT) 1.0",
+    "href": "https://spec.jsonlt.org/latest/",
+    "publisher": "jsonlt.org"
+  },
+  "JSON-SCHEMA-TEST-SUITE": {
+    "title": "JSON Schema Test Suite",
+    "href": "https://github.com/json-schema-org/JSON-Schema-Test-Suite",
+    "publisher": "JSON Schema"
+  },
+  "RFC2119": {
+    "authors": ["S. Bradner"],
+    "title": "Key words for use in RFCs to Indicate Requirement Levels",
+    "href": "https://www.rfc-editor.org/rfc/rfc2119",
+    "publisher": "IETF"
+  },
+  "RFC4648": {
+    "authors": ["S. Josefsson"],
+    "title": "The Base16, Base32, and Base64 Data Encodings",
+    "href": "https://www.rfc-editor.org/rfc/rfc4648",
+    "publisher": "IETF"
+  },
+  "RFC8174": {
+    "authors": ["B. Leiba"],
+    "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+    "href": "https://www.rfc-editor.org/rfc/rfc8174",
+    "publisher": "IETF"
+  },
+  "RFC8259": {
+    "authors": ["T. Bray"],
+    "title": "The JavaScript Object Notation (JSON) Data Interchange Format",
+    "href": "https://www.rfc-editor.org/rfc/rfc8259",
+    "publisher": "IETF"
+  }
+}
+</pre>

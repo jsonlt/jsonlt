@@ -1,0 +1,41 @@
+{
+	"folders": [
+		{
+			"name": ".github",
+			"path": "../../.github"
+		},
+		{
+			"name": "jsonlt",
+			"path": ".."
+		},
+		{
+			"name": "jsonlt.org",
+			"path": "../../jsonlt.org"
+		},
+		{
+			"name": "jsonlt-go",
+			"path": "../../jsonlt-go"
+		},
+		{
+			"name": "jsonlt-javascript",
+			"path": "../../jsonlt-javascript"
+		},
+		{
+			"name": "jsonlt-python",
+			"path": "../../jsonlt-python"
+		},
+		{
+			"name": "jsonlt-ruby",
+			"path": "../../jsonlt-ruby"
+		},
+		{
+			"name": "jsonlt-rust",
+			"path": "../../jsonlt-rust"
+		},
+		{
+			"name": "vale-jsonlt",
+			"path": "../../vale-jsonlt"
+		}
+  ],
+  "settings": {}
+}

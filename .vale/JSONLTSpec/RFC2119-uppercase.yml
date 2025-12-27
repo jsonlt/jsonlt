@@ -1,0 +1,16 @@
+---
+extends: substitution
+message: "RFC 2119 keyword '%s' should be uppercase when normative"
+level: error
+ignorecase: false
+action:
+  name: replace
+swap:
+  '(?<![`\w])must(?![`\w])': "MUST"
+  '(?<![`\w])must not(?![`\w])': "MUST NOT"
+  '(?<![`\w])shall(?![`\w])': "SHALL"
+  '(?<![`\w])shall not(?![`\w])': "SHALL NOT"
+  '(?<![`\w])should(?![`\w])': "SHOULD"
+  '(?<![`\w])should not(?![`\w])': "SHOULD NOT"
+  '(?<![`\w])required(?![`\w])': "REQUIRED"
+  '(?<![`\w])recommended(?![`\w])': "RECOMMENDED"

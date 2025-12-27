@@ -1,0 +1,237 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "generator",
+  "tests": [
+    {
+      "id": "generator-no-bom",
+      "description": "Generator output does not start with byte order mark (U+FEFF)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "v": "test"}
+      },
+      "outputNotMatches": "^\\uFEFF"
+    },
+    {
+      "id": "generator-trailing-newline",
+      "description": "Generator ensures non-empty files end with newline",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "v": "test"}
+      },
+      "outputMatches": "\\n$"
+    },
+    {
+      "id": "generator-lf-only",
+      "description": "Generator uses LF line endings, not CRLF",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "v": "test"},
+        "2": {"id": 2, "v": "test2"}
+      },
+      "outputNotMatches": "\\r"
+    },
+    {
+      "id": "generator-no-empty-lines",
+      "description": "Generator does not produce empty lines",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "v": "a"},
+        "2": {"id": 2, "v": "b"}
+      },
+      "outputNotMatches": "\\n\\n"
+    },
+    {
+      "id": "generator-key-order-simple",
+      "description": "Generator sorts object keys lexicographically",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "zebra": "z", "apple": "a", "mango": "m"}
+      },
+      "outputMatches": "\"apple\":\"a\",\"id\":1,\"mango\":\"m\",\"zebra\":\"z\""
+    },
+    {
+      "id": "generator-key-order-nested",
+      "description": "Generator sorts nested object keys lexicographically",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "data": {"zebra": 1, "apple": 2}}
+      },
+      "outputMatches": "\"data\":\\{\"apple\":2,\"zebra\":1\\}"
+    },
+    {
+      "id": "generator-no-whitespace-outside-strings",
+      "description": "Generator does not include whitespace except within string values",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "msg": "hello world"}
+      },
+      "outputMatches": "^\\{\"id\":1,\"msg\":\"hello world\"\\}\\n$"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-high",
+      "description": "Generator rejects records containing unpaired high surrogate (U+D800)",
+      "key": "id",
+      "surrogateCodepoint": "U+D800",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-high-mid",
+      "description": "Generator rejects records containing unpaired high surrogate in middle range (U+DB00)",
+      "key": "id",
+      "surrogateCodepoint": "U+DB00",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-high-max",
+      "description": "Generator rejects records containing unpaired high surrogate at max (U+DBFF)",
+      "key": "id",
+      "surrogateCodepoint": "U+DBFF",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-low",
+      "description": "Generator rejects records containing unpaired low surrogate (U+DC00)",
+      "key": "id",
+      "surrogateCodepoint": "U+DC00",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-low-mid",
+      "description": "Generator rejects records containing unpaired low surrogate in middle range (U+DE00)",
+      "key": "id",
+      "surrogateCodepoint": "U+DE00",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-reject-unpaired-surrogate-low-max",
+      "description": "Generator rejects records containing unpaired low surrogate at max (U+DFFF)",
+      "key": "id",
+      "surrogateCodepoint": "U+DFFF",
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "generator-accept-valid-surrogate-pair",
+      "description": "Generator accepts properly paired surrogates forming valid Unicode (emoji U+1F600 grinning face)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "emoji": "😀"}
+      },
+      "expect": "accept"
+    },
+    {
+      "id": "generator-accept-valid-surrogate-pair-flag",
+      "description": "Generator accepts surrogate pair forming flag emoji (U+1F1FA U+1F1F8 US flag)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "flag": "🇺🇸"}
+      },
+      "expect": "accept"
+    },
+    {
+      "id": "generator-key-order-unicode",
+      "description": "Generator sorts keys by Unicode code point (case-sensitive, uppercase before lowercase)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "Banana": "B", "apple": "a"}
+      },
+      "outputMatches": "\"Banana\":\"B\".*\"apple\":\"a\""
+    },
+    {
+      "id": "generator-standard-json-escaping",
+      "description": "Generator uses standard JSON string escaping for control characters",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "text": "line1\nline2\ttab"}
+      },
+      "outputMatches": "\"text\":\"line1\\\\nline2\\\\ttab\""
+    },
+    {
+      "id": "generator-escape-required-chars",
+      "description": "Generator escapes characters required by RFC 8259 (quote and backslash)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "text": "quote\"backslash\\"}
+      },
+      "outputMatches": "\"text\":\"quote\\\\\"backslash\\\\\\\\\""
+    },
+    {
+      "id": "generator-empty-string-key",
+      "description": "Generator handles empty string key value correctly",
+      "key": "id",
+      "state": {
+        "": {"id": "", "v": 1}
+      },
+      "outputMatches": "\"id\":\"\""
+    },
+    {
+      "id": "generator-integer-key",
+      "description": "Generator serializes integer key correctly (no decimal point for whole numbers)",
+      "key": "id",
+      "state": {
+        "42": {"id": 42, "v": 1}
+      },
+      "outputMatches": "\"id\":42[,}]"
+    },
+    {
+      "id": "generator-compound-key-order",
+      "description": "Generator sorts compound key fields lexicographically",
+      "key": ["org", "id"],
+      "state": {
+        "[\"acme\",1]": {"id": 1, "org": "acme", "zebra": "z", "apple": "a"}
+      },
+      "outputMatches": "\"apple\":\"a\".*\"id\":1.*\"org\":\"acme\".*\"zebra\":\"z\""
+    },
+    {
+      "id": "generator-no-duplicate-keys",
+      "description": "Generator never produces JSON objects with duplicate keys",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "v": 1}
+      },
+      "outputNotMatches": "\"([^\"]+)\":[^,}]*,.*\"\\1\":"
+    },
+    {
+      "id": "generator-reject-dollar-prefixed-field",
+      "description": "Generator rejects records containing $-prefixed field names",
+      "key": "id",
+      "record": {"id": 1, "$custom": "forbidden"},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    // Generator key length limit tests: The key strings are 1022 characters ('a' repeated)
+    // which equals exactly 1024 bytes when JSON-serialized with surrounding quotes.
+    {
+      "id": "generator-key-length-limit-accept",
+      "description": "Generator accepts record with key at exactly 1024 bytes (1022 chars + 2 quote bytes)",
+      "key": "id",
+      "state": {
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {"id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "v": 1}
+      },
+      "expect": "accept"
+    },
+    // This key is 1023 characters (one more than valid) = 1025 bytes with quotes
+    {
+      "id": "generator-key-length-limit-reject",
+      "description": "Generator rejects record with key exceeding 1024 bytes (§8 LIMIT_ERROR)",
+      "key": "id",
+      "record": {"id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", "v": 1},
+      "expect": "reject",
+      "error": "LIMIT_ERROR"
+    },
+    {
+      "id": "generator-tuple-element-limit-accept",
+      "description": "Generator accepts 16-element tuple key (at maximum limit)",
+      "key": ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"],
+      "state": {
+        "[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]": {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16}
+      },
+      "expect": "accept"
+    }
+  ]
+}

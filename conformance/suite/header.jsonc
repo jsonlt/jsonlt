@@ -1,0 +1,381 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "header",
+  "tests": [
+    {
+      "id": "header-version-1-valid",
+      "description": "Header with version 1 is accepted",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": 1, \"name\": \"test\"}"
+      ],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "name": "test"}
+      }
+    },
+    {
+      "id": "header-version-only",
+      "description": "Header with only version field is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1}}"
+      ],
+      "openWith": {"key": "id"},
+      "expect": "accept",
+      "state": {}
+    },
+    {
+      "id": "header-key-string",
+      "description": "Header with string key specifier is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": \"alice\", \"role\": \"admin\"}"
+      ],
+      "expect": "accept",
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "header-key-array",
+      "description": "Header with array key specifier (compound key) is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"org\", \"id\"]}}",
+        "{\"org\": \"acme\", \"id\": 1, \"name\": \"alice\"}"
+      ],
+      "expect": "accept",
+      "state": {
+        "[\"acme\",1]": {"org": "acme", "id": 1, "name": "alice"}
+      }
+    },
+    {
+      "id": "header-key-single-element-array",
+      "description": "Single-element array key specifier normalizes to scalar key",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\"]}}",
+        "{\"id\": \"alice\", \"role\": \"admin\"}"
+      ],
+      "expect": "accept",
+      "state": {
+        "alice": {"id": "alice", "role": "admin"}
+      }
+    },
+    {
+      "id": "header-key-mismatch",
+      "description": "Opening with mismatched key specifier fails",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": 1, \"name\": \"test\"}"
+      ],
+      "openWith": {"key": "name"},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-single-vs-array-match",
+      "description": "String key specifier matches single-element array key specifier",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\"]}}",
+        "{\"id\": 1, \"name\": \"test\"}"
+      ],
+      "openWith": {"key": "id"},
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "name": "test"}
+      }
+    },
+    {
+      "id": "header-missing-version",
+      "description": "Header missing version field is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-not-integer",
+      "description": "Header with non-integer version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": \"1\", \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-unsupported",
+      "description": "Header with unsupported version number is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 2, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-zero-rejected",
+      "description": "Header with version 0 is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 0, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-negative-rejected",
+      "description": "Header with negative version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": -1, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-float-rejected",
+      "description": "Header with float version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1.5, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-null-rejected",
+      "description": "Header with null version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": null, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-boolean-rejected",
+      "description": "Header with boolean version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": true, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-array-rejected",
+      "description": "Header with array version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": [1], \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-version-object-rejected",
+      "description": "Header with object version is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": {\"v\": 1}, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-jsonlt-not-object",
+      "description": "Header with $jsonlt value that is not an object is rejected",
+      "input": [
+        "{\"$jsonlt\": \"invalid\"}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-not-first-line",
+      "description": "Header appearing after first line is rejected",
+      "input": [
+        "{\"id\": 1}",
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}"
+      ],
+      "openWith": {"key": "id"},
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-key-empty-array",
+      "description": "Header with empty array key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": []}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-duplicate-fields",
+      "description": "Header with duplicate fields in key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\", \"id\"]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-integer-rejected",
+      "description": "Header with integer key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": 42}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-boolean-rejected",
+      "description": "Header with boolean key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": true}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-null-rejected",
+      "description": "Header with null key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": null}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-object-rejected",
+      "description": "Header with object key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": {\"field\": \"id\"}}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-array-nonstring-rejected",
+      "description": "Header with array containing non-string element is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\", 42]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-with-schema-url",
+      "description": "Header with $schema URL is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\", \"$schema\": \"https://example.com/schema.json\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "header-with-inline-schema",
+      "description": "Header with inline schema object is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\", \"schema\": {\"type\": \"object\"}}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "header-both-schema-and-schema-url",
+      "description": "Header with both $schema and schema is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\", \"$schema\": \"https://example.com/schema.json\", \"schema\": {\"type\": \"object\"}}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "header-with-meta",
+      "description": "Header with meta field is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\", \"meta\": {\"created\": \"2025-01-01\", \"author\": \"test\"}}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "header-unknown-fields-accepted",
+      "description": "Header with unknown fields is accepted (forward compatibility)",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\", \"futureField\": \"value\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "header-no-key-no-open-key",
+      "description": "Opening file without header key and without open key fails",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-no-key-with-open-key",
+      "description": "Opening file without header key but with open key succeeds",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1}}",
+        "{\"id\": 1}"
+      ],
+      "openWith": {"key": "id"},
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "header-no-header-with-open-key",
+      "description": "Opening file without header but with open key succeeds",
+      "input": [
+        "{\"id\": 1, \"name\": \"test\"}"
+      ],
+      "openWith": {"key": "id"},
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1, "name": "test"}
+      }
+    },
+    {
+      "id": "header-no-header-no-open-key",
+      "description": "Opening file without header and without open key fails",
+      "input": [
+        "{\"id\": 1, \"name\": \"test\"}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    }
+  ]
+}

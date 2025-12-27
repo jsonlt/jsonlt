@@ -1,0 +1,235 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "ops",
+  "tests": [
+    {
+      "id": "ops-put-get",
+      "description": "Put a record and get it back",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "role": "admin"}}
+      ]
+    },
+    {
+      "id": "ops-get-nonexistent",
+      "description": "Get returns null for nonexistent key",
+      "key": "id",
+      "steps": [
+        {"op": "get", "key": "bob", "returns": null}
+      ]
+    },
+    {
+      "id": "ops-has-exists",
+      "description": "Has returns true for existing key",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "has", "key": "alice", "returns": true}
+      ]
+    },
+    {
+      "id": "ops-has-nonexistent",
+      "description": "Has returns false for nonexistent key",
+      "key": "id",
+      "steps": [
+        {"op": "has", "key": "bob", "returns": false}
+      ]
+    },
+    {
+      "id": "ops-delete-exists",
+      "description": "Delete returns true when record exists",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "delete", "key": "alice", "returns": true},
+        {"op": "get", "key": "alice", "returns": null}
+      ]
+    },
+    {
+      "id": "ops-delete-nonexistent",
+      "description": "Delete returns false when record does not exist",
+      "key": "id",
+      "steps": [
+        {"op": "delete", "key": "bob", "returns": false}
+      ]
+    },
+    {
+      "id": "ops-all-empty",
+      "description": "All returns empty array for empty table",
+      "key": "id",
+      "steps": [
+        {"op": "all", "returns": []}
+      ]
+    },
+    {
+      "id": "ops-all-sorted",
+      "description": "All returns records in key order",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "all", "returns": [{"id": "alice", "v": 1}, {"id": "bob", "v": 2}]}
+      ]
+    },
+    {
+      "id": "ops-keys-empty",
+      "description": "Keys returns empty array for empty table",
+      "key": "id",
+      "steps": [
+        {"op": "keys", "returns": []}
+      ]
+    },
+    {
+      "id": "ops-keys-sorted",
+      "description": "Keys returns keys in key order",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "keys", "returns": ["alice", "bob"]}
+      ]
+    },
+    {
+      "id": "ops-count-empty",
+      "description": "Count returns 0 for empty table",
+      "key": "id",
+      "steps": [
+        {"op": "count", "returns": 0}
+      ]
+    },
+    {
+      "id": "ops-count-after-operations",
+      "description": "Count reflects current record count",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "count", "returns": 1},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "count", "returns": 2},
+        {"op": "delete", "key": "alice", "returns": true},
+        {"op": "count", "returns": 1}
+      ]
+    },
+    {
+      "id": "ops-clear",
+      "description": "Clear removes all records",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "clear", "returns": null},
+        {"op": "count", "returns": 0},
+        {"op": "all", "returns": []}
+      ]
+    },
+    {
+      "id": "ops-put-reserved-field",
+      "description": "Put rejects records with $-prefixed fields",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "$custom": "value"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-missing-key",
+      "description": "Put rejects records missing key field",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"name": "alice"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-null-key",
+      "description": "Put rejects records with null key value",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": null, "name": "alice"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-overwrite",
+      "description": "Put overwrites existing record with same key",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "user"}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "role": "admin"}}
+      ]
+    },
+    {
+      "id": "ops-integer-keys",
+      "description": "Operations work with integer keys",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": 1, "name": "first"}, "returns": null},
+        {"op": "put", "record": {"id": 2, "name": "second"}, "returns": null},
+        {"op": "get", "key": 1, "returns": {"id": 1, "name": "first"}},
+        {"op": "has", "key": 2, "returns": true},
+        {"op": "delete", "key": 1, "returns": true},
+        {"op": "keys", "returns": [2]}
+      ]
+    },
+    {
+      "id": "ops-compound-keys",
+      "description": "Operations work with compound keys",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "put", "record": {"org": "acme", "id": 1, "name": "alice"}, "returns": null},
+        {"op": "put", "record": {"org": "acme", "id": 2, "name": "bob"}, "returns": null},
+        {"op": "get", "key": ["acme", 1], "returns": {"org": "acme", "id": 1, "name": "alice"}},
+        {"op": "has", "key": ["acme", 2], "returns": true},
+        {"op": "delete", "key": ["acme", 1], "returns": true},
+        {"op": "keys", "returns": [["acme", 2]]}
+      ]
+    },
+    {
+      "id": "ops-delete-tuple-key-simple-table",
+      "description": "Delete rejects tuple key when table has simple key specifier",
+      "key": "id",
+      "steps": [
+        {"op": "delete", "key": ["a", "b"], "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-delete-simple-key-compound-table",
+      "description": "Delete rejects simple key when table has compound key specifier",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "delete", "key": "alice", "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-delete-wrong-arity-tuple",
+      "description": "Delete rejects tuple key with wrong number of elements",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "delete", "key": ["acme", 1, "extra"], "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-get-empty-tuple-key-rejected",
+      "description": "Get rejects empty tuple key (SHALL per spec §4.3)",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "get", "key": [], "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-delete-empty-tuple-key-rejected",
+      "description": "Delete rejects empty tuple key (SHALL per spec §4.3)",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "delete", "key": [], "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-has-empty-tuple-key-rejected",
+      "description": "Has rejects empty tuple key (SHALL per spec §4.3)",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "has", "key": [], "error": "KEY_ERROR"}
+      ]
+    }
+  ]
+}

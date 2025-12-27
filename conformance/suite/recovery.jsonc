@@ -1,0 +1,82 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "recovery",
+  "tests": [
+    {
+      "id": "recovery-crlf-stripped",
+      "description": "Parser strips CR characters preceding LF (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1}\r\n",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "recovery-empty-line-skipped",
+      "description": "Parser skips empty lines (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1}\n\n{\"id\": 2}\n",
+      "state": {
+        "1": {"id": 1},
+        "2": {"id": 2}
+      }
+    },
+    {
+      "id": "recovery-bom-stripped",
+      "description": "Parser strips BOM and accepts file (SHOULD per spec)",
+      "key": "id",
+      "inputBase64": "77u/eyJpZCI6IDF9Cg==",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "recovery-tombstone-extra-fields",
+      "description": "Parser accepts tombstones with extra fields, ignoring them (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1, \"name\": \"alice\"}\n{\"$deleted\": true, \"id\": 1, \"extra\": \"ignored\"}\n",
+      "state": {}
+    },
+    {
+      "id": "recovery-truncated-final-line",
+      "description": "Parser ignores truncated final line without newline (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1}\n{\"id\":",
+      "state": {
+        "1": {"id": 1}
+      }
+    },
+    {
+      "id": "recovery-multiple-empty-lines",
+      "description": "Parser skips multiple consecutive empty lines",
+      "key": "id",
+      "input": "{\"id\": 1}\n\n\n\n{\"id\": 2}\n",
+      "state": {
+        "1": {"id": 1},
+        "2": {"id": 2}
+      }
+    },
+    {
+      "id": "recovery-crlf-mixed",
+      "description": "Parser handles mixed LF and CRLF line endings",
+      "key": "id",
+      "input": "{\"id\": 1}\r\n{\"id\": 2}\n{\"id\": 3}\r\n",
+      "state": {
+        "1": {"id": 1},
+        "2": {"id": 2},
+        "3": {"id": 3}
+      }
+    },
+    {
+      "id": "recovery-trailing-whitespace-stripped",
+      "description": "Parser strips trailing whitespace before parsing (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1}   \n{\"id\": 2}\t\n{\"id\": 3} \t \n",
+      "state": {
+        "1": {"id": 1},
+        "2": {"id": 2},
+        "3": {"id": 3}
+      }
+    }
+  ]
+}

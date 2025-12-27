@@ -1,0 +1,465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "title": "JSONLT Conformance Test Suite",
+  "description": "Schema for JSONLT conformance test files",
+  "type": "object",
+  "required": ["suite", "tests"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "suite": {
+      "type": "string",
+      "description": "Test suite category",
+      "enum": ["format", "state", "ops", "tx", "transactions", "header", "keys", "recovery", "compaction", "generator"]
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/testCase"
+      }
+    }
+  },
+  "$defs": {
+    "testCase": {
+      "type": "object",
+      "required": ["id", "description"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Unique test identifier"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what the test verifies"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^format-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/formatTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^state-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/stateTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^ops-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/opsTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^tx-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/txTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^header-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/headerTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^key-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/keyTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^recovery-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/recoveryTest"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": { "pattern": "^generator-" }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/generatorTest"
+          }
+        }
+      ]
+    },
+    "keySpecifier": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      ],
+      "description": "Key specifier: field name or array of field names"
+    },
+    "fileInput": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ],
+      "description": "File content as string or array of lines"
+    },
+    "key": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "integer" },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "integer" }
+            ]
+          }
+        }
+      ],
+      "description": "A key value (string, integer, or tuple)"
+    },
+    "errorCategory": {
+      "type": "string",
+      "enum": ["PARSE_ERROR", "KEY_ERROR", "IO_ERROR", "LOCK_ERROR", "TRANSACTION_ERROR", "CONFLICT_ERROR", "LIMIT_ERROR"],
+      "description": "Error category"
+    },
+    "operation": {
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["put", "get", "has", "delete", "all", "keys", "count", "clear", "compact"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "op": { "const": "put" } }
+          },
+          "then": {
+            "properties": {
+              "record": { "type": "object" },
+              "returns": { "const": null },
+              "error": { "$ref": "#/$defs/errorCategory" }
+            },
+            "required": ["record"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "get" } }
+          },
+          "then": {
+            "properties": {
+              "key": { "$ref": "#/$defs/key" },
+              "returns": {
+                "oneOf": [
+                  { "type": "object" },
+                  { "type": "null" }
+                ]
+              }
+            },
+            "required": ["key"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "has" } }
+          },
+          "then": {
+            "properties": {
+              "key": { "$ref": "#/$defs/key" },
+              "returns": { "type": "boolean" }
+            },
+            "required": ["key"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "delete" } }
+          },
+          "then": {
+            "properties": {
+              "key": { "$ref": "#/$defs/key" },
+              "returns": { "type": "boolean" }
+            },
+            "required": ["key"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "all" } }
+          },
+          "then": {
+            "properties": {
+              "returns": {
+                "type": "array",
+                "items": { "type": "object" }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "keys" } }
+          },
+          "then": {
+            "properties": {
+              "returns": {
+                "type": "array",
+                "items": { "$ref": "#/$defs/key" }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "count" } }
+          },
+          "then": {
+            "properties": {
+              "returns": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "clear" } }
+          },
+          "then": {
+            "properties": {
+              "returns": { "const": null }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "compact" } }
+          },
+          "then": {
+            "properties": {
+              "returns": { "const": null }
+            }
+          }
+        }
+      ]
+    },
+    "formatTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "input": { "$ref": "#/$defs/fileInput" },
+        "inputBase64": { "type": "string" },
+        "expect": {
+          "type": "string",
+          "enum": ["accept", "reject"]
+        },
+        "error": { "$ref": "#/$defs/errorCategory" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        }
+      },
+      "required": ["key", "expect"],
+      "oneOf": [
+        { "required": ["input"] },
+        { "required": ["inputBase64"] }
+      ]
+    },
+    "stateTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "input": { "$ref": "#/$defs/fileInput" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        }
+      },
+      "required": ["key", "input", "state"]
+    },
+    "opsTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "input": { "$ref": "#/$defs/fileInput" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation" },
+          "minItems": 1
+        }
+      },
+      "required": ["key", "steps"]
+    },
+    "txTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "setup": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation" },
+          "description": "Operations to run before starting the transaction"
+        },
+        "transaction": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation" },
+          "description": "Operations to execute within the transaction"
+        },
+        "nestedAttempt": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, attempt to start a nested transaction during the transaction block, which should fail with TRANSACTION_ERROR"
+        },
+        "externalModifications": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation" },
+          "description": "Operations performed by an external process after transaction starts but before commit, simulating concurrent modifications for conflict detection"
+        },
+        "commit": {
+          "type": "boolean",
+          "default": true
+        },
+        "error": { "$ref": "#/$defs/errorCategory" },
+        "after": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation" }
+        }
+      },
+      "required": ["key"]
+    },
+    "headerTest": {
+      "properties": {
+        "input": { "$ref": "#/$defs/fileInput" },
+        "openWith": {
+          "type": "object",
+          "properties": {
+            "key": { "$ref": "#/$defs/keySpecifier" }
+          }
+        },
+        "expect": {
+          "type": "string",
+          "enum": ["accept", "reject"]
+        },
+        "error": { "$ref": "#/$defs/errorCategory" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        }
+      },
+      "required": ["input", "expect"]
+    },
+    "keyTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "input": { "$ref": "#/$defs/fileInput" },
+        "expect": {
+          "type": "string",
+          "enum": ["accept", "reject"]
+        },
+        "error": { "$ref": "#/$defs/errorCategory" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        },
+        "keys": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/key" }
+        }
+      },
+      "required": ["key", "input"]
+    },
+    "recoveryTest": {
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "input": { "$ref": "#/$defs/fileInput" },
+        "inputBase64": { "type": "string" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" }
+        }
+      },
+      "required": ["key", "state"]
+    },
+    "generatorTest": {
+      "description": "Tests that verify generator output conformance",
+      "properties": {
+        "key": { "$ref": "#/$defs/keySpecifier" },
+        "state": {
+          "type": "object",
+          "additionalProperties": { "type": "object" },
+          "description": "Initial state to write via the generator"
+        },
+        "record": {
+          "type": "object",
+          "description": "Single record to attempt to write (for rejection tests)"
+        },
+        "surrogateCodepoint": {
+          "type": "string",
+          "pattern": "^U\\+[0-9A-Fa-f]{4,6}$",
+          "description": "For surrogate rejection tests: the codepoint (e.g., U+D800) to inject into a test record. The harness constructs a record {id: 1, text: <char>} using language-specific string construction."
+        },
+        "expect": {
+          "type": "string",
+          "enum": ["accept", "reject"],
+          "description": "Whether the generator should accept or reject the input"
+        },
+        "error": { "$ref": "#/$defs/errorCategory" },
+        "outputMatches": {
+          "type": "string",
+          "description": "Regex pattern the output MUST match"
+        },
+        "outputNotMatches": {
+          "type": "string",
+          "description": "Regex pattern the output MUST NOT match"
+        },
+        "outputExact": {
+          "type": "string",
+          "description": "Exact expected output (byte-for-byte comparison)"
+        }
+      },
+      "required": ["key"],
+      "anyOf": [
+        { "required": ["state"] },
+        { "required": ["record"] },
+        { "required": ["surrogateCodepoint"] }
+      ]
+    }
+  }
+}

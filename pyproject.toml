@@ -1,0 +1,22 @@
+[project]
+name = "jsonlt-spec"
+version = "0.0.0"
+description = "JSONLT specification, website, and conformance test suite."
+readme = "README.md"
+authors = [{ name = "Tony Burns", email = "tony@tonyburns.net" }]
+requires-python = ">=3.14"
+dependencies = ["bikeshed>=7.0.5", "pip>=25.3"]
+
+[dependency-groups]
+dev = [
+    "check-jsonschema>=0.36.0",
+    "json5>=0.12.0",
+    "jsonschema>=4.25.1",
+    "linkchecker>=10.6.0",
+    "vale>=3.13.0.0",
+    "watchfiles>=1.1.1",
+]
+
+[tool.codespell]
+skip = "uv.lock,pnpm-lock.yaml,build,dist"
+ignore-words-list = "caf"

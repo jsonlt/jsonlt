@@ -1,0 +1,352 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "keys",
+  "tests": [
+    {
+      "id": "key-string-valid",
+      "description": "String keys are valid",
+      "key": "id",
+      "input": ["{\"id\": \"alice\", \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "alice": {"id": "alice", "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-valid",
+      "description": "Integer keys are valid",
+      "key": "id",
+      "input": ["{\"id\": 42, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "42": {"id": 42, "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-negative",
+      "description": "Negative integer keys are valid",
+      "key": "id",
+      "input": ["{\"id\": -1, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "-1": {"id": -1, "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-zero",
+      "description": "Zero is a valid integer key",
+      "key": "id",
+      "input": ["{\"id\": 0, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "0": {"id": 0, "v": 1}
+      }
+    },
+    {
+      "id": "key-null-rejected",
+      "description": "Null key values are rejected",
+      "key": "id",
+      "input": ["{\"id\": null, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-boolean-true-rejected",
+      "description": "Boolean true key values are rejected",
+      "key": "id",
+      "input": ["{\"id\": true, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-boolean-false-rejected",
+      "description": "Boolean false key values are rejected",
+      "key": "id",
+      "input": ["{\"id\": false, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-float-rejected",
+      "description": "Non-integer number keys are rejected",
+      "key": "id",
+      "input": ["{\"id\": 1.5, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-object-rejected",
+      "description": "Object key values are rejected",
+      "key": "id",
+      "input": ["{\"id\": {\"nested\": true}, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-array-rejected",
+      "description": "Array key values are rejected (for single-field key specifier)",
+      "key": "id",
+      "input": ["{\"id\": [1, 2], \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-missing-field",
+      "description": "Record missing key field is rejected",
+      "key": "id",
+      "input": ["{\"name\": \"alice\", \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-integer-as-float",
+      "description": "Integer written as 1.0 is accepted as integer key",
+      "key": "id",
+      "input": ["{\"id\": 1.0, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "1": {"id": 1.0, "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-scientific",
+      "description": "Integer in scientific notation (1e2) is accepted",
+      "key": "id",
+      "input": ["{\"id\": 1e2, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "100": {"id": 1e2, "v": 1}
+      }
+    },
+    {
+      "id": "key-order-integers",
+      "description": "Integer keys are sorted numerically",
+      "key": "id",
+      "input": [
+        "{\"id\": 10, \"v\": 1}",
+        "{\"id\": 2, \"v\": 2}",
+        "{\"id\": 1, \"v\": 3}"
+      ],
+      "keys": [1, 2, 10]
+    },
+    {
+      "id": "key-order-strings",
+      "description": "String keys are sorted lexicographically by code point",
+      "key": "id",
+      "input": [
+        "{\"id\": \"banana\", \"v\": 1}",
+        "{\"id\": \"apple\", \"v\": 2}",
+        "{\"id\": \"cherry\", \"v\": 3}"
+      ],
+      "keys": ["apple", "banana", "cherry"]
+    },
+    {
+      "id": "key-order-mixed-types",
+      "description": "Integers sort before strings",
+      "key": "id",
+      "input": [
+        "{\"id\": \"b\", \"v\": 1}",
+        "{\"id\": 2, \"v\": 2}",
+        "{\"id\": \"a\", \"v\": 3}",
+        "{\"id\": 1, \"v\": 4}"
+      ],
+      "keys": [1, 2, "a", "b"]
+    },
+    {
+      "id": "key-order-negative-integers",
+      "description": "Negative integers sort correctly",
+      "key": "id",
+      "input": [
+        "{\"id\": 1, \"v\": 1}",
+        "{\"id\": -1, \"v\": 2}",
+        "{\"id\": 0, \"v\": 3}",
+        "{\"id\": -10, \"v\": 4}"
+      ],
+      "keys": [-10, -1, 0, 1]
+    },
+    {
+      "id": "key-order-tuples",
+      "description": "Tuple keys are sorted lexicographically by element",
+      "key": ["org", "id"],
+      "input": [
+        "{\"org\": \"b\", \"id\": 1, \"v\": 1}",
+        "{\"org\": \"a\", \"id\": 2, \"v\": 2}",
+        "{\"org\": \"a\", \"id\": 1, \"v\": 3}"
+      ],
+      "keys": [["a", 1], ["a", 2], ["b", 1]]
+    },
+    {
+      "id": "key-empty-string",
+      "description": "Empty string is a valid key",
+      "key": "id",
+      "input": ["{\"id\": \"\", \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "": {"id": "", "v": 1}
+      }
+    },
+    {
+      "id": "key-compound-missing-field",
+      "description": "Record missing one compound key field is rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-compound-null-element",
+      "description": "Compound key with null element is rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"id\": null, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-array-value-in-compound-rejected",
+      "description": "Array values in compound key fields are rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"id\": []}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-tuple-16-elements-max",
+      "description": "16-element tuple is accepted (at maximum limit)",
+      "key": ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"],
+      "input": ["{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16}"],
+      "expect": "accept",
+      "state": {
+        "[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]": {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16}
+      }
+    },
+    {
+      "id": "key-tuple-17-elements-rejected",
+      "description": "17-element tuple exceeds limit and is rejected (SHALL per spec)",
+      "key": ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q"],
+      "input": ["{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9,\"j\":10,\"k\":11,\"l\":12,\"m\":13,\"n\":14,\"o\":15,\"p\":16,\"q\":17}"],
+      "expect": "reject",
+      "error": "LIMIT_ERROR"
+    },
+    {
+      "id": "key-integer-max-valid",
+      "description": "Maximum valid integer key (2^53 - 1) is accepted",
+      "key": "id",
+      "input": ["{\"id\": 9007199254740991, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "9007199254740991": {"id": 9007199254740991, "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-min-valid",
+      "description": "Minimum valid integer key (-(2^53) + 1) is accepted",
+      "key": "id",
+      "input": ["{\"id\": -9007199254740991, \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "-9007199254740991": {"id": -9007199254740991, "v": 1}
+      }
+    },
+    {
+      "id": "key-integer-exceeds-max",
+      "description": "Integer key exceeding 2^53 - 1 is rejected",
+      "key": "id",
+      "input": ["{\"id\": 9007199254740992, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-integer-exceeds-min",
+      "description": "Integer key below -(2^53) + 1 is rejected",
+      "key": "id",
+      "input": ["{\"id\": -9007199254740992, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    // Key length limit tests: The key strings below are 1022 characters ('a' repeated)
+    // which equals exactly 1024 bytes when JSON-serialized with surrounding quotes.
+    // The spec defines maximum key length as 1024 bytes including quotes.
+    {
+      "id": "key-length-1024-bytes-valid",
+      "description": "Key at exactly 1024 bytes is accepted (1022 chars + 2 quote bytes)",
+      "key": "id",
+      "input": ["{\"id\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"v\": 1}"],
+      "expect": "accept",
+      "state": {
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {"id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "v": 1}
+      }
+    },
+    // This key is 1023 characters (one more than the valid test) = 1025 bytes with quotes
+    {
+      "id": "key-length-exceeds-1024-bytes",
+      "description": "Key exceeding 1024 bytes is rejected (1023 chars + 2 quote bytes = 1025 bytes)",
+      "key": "id",
+      "input": ["{\"id\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab\", \"v\": 1}"],
+      "expect": "reject",
+      "error": "LIMIT_ERROR"
+    },
+    {
+      "id": "key-unicode-no-normalization",
+      "description": "Pre-composed and decomposed Unicode forms are distinct keys (no normalization)",
+      "key": "name",
+      "input": [
+        "{\"name\": \"caf\\u00E9\", \"v\": 1}",
+        "{\"name\": \"cafe\\u0301\", \"v\": 2}"
+      ],
+      "state": {
+        "caf\u00E9": {"name": "café", "v": 1},
+        "cafe\u0301": {"name": "café", "v": 2}
+      }
+    },
+    {
+      "id": "key-negative-zero-positive-zero-equal",
+      "description": "Negative zero and positive zero are equal as keys",
+      "key": "id",
+      "input": [
+        "{\"id\": 0, \"v\": 1}",
+        "{\"id\": -0, \"v\": 2}"
+      ],
+      "state": {
+        "0": {"id": -0, "v": 2}
+      }
+    },
+    {
+      "id": "key-compound-3-elements",
+      "description": "3-element compound key works correctly",
+      "key": ["region", "org", "id"],
+      "input": [
+        "{\"region\": \"us\", \"org\": \"acme\", \"id\": 1, \"name\": \"alice\"}",
+        "{\"region\": \"us\", \"org\": \"acme\", \"id\": 2, \"name\": \"bob\"}",
+        "{\"region\": \"eu\", \"org\": \"acme\", \"id\": 1, \"name\": \"carol\"}"
+      ],
+      "state": {
+        "[\"us\",\"acme\",1]": {"region": "us", "org": "acme", "id": 1, "name": "alice"},
+        "[\"us\",\"acme\",2]": {"region": "us", "org": "acme", "id": 2, "name": "bob"},
+        "[\"eu\",\"acme\",1]": {"region": "eu", "org": "acme", "id": 1, "name": "carol"}
+      }
+    },
+    {
+      "id": "key-order-tuple-mixed-element-types",
+      "description": "Tuple elements with mixed types sort integers before strings",
+      "key": ["org", "id"],
+      "input": [
+        "{\"org\": \"acme\", \"id\": \"z\", \"v\": 1}",
+        "{\"org\": \"acme\", \"id\": 1, \"v\": 2}",
+        "{\"org\": \"acme\", \"id\": \"a\", \"v\": 3}",
+        "{\"org\": \"acme\", \"id\": 2, \"v\": 4}"
+      ],
+      "keys": [["acme", 1], ["acme", 2], ["acme", "a"], ["acme", "z"]]
+    },
+    {
+      "id": "key-order-tuple-first-element-differs",
+      "description": "Tuple ordering is determined by first differing element",
+      "key": ["a", "b", "c"],
+      "input": [
+        "{\"a\": \"x\", \"b\": \"y\", \"c\": 2, \"v\": 1}",
+        "{\"a\": \"x\", \"b\": \"y\", \"c\": 1, \"v\": 2}",
+        "{\"a\": \"x\", \"b\": \"x\", \"c\": 3, \"v\": 3}"
+      ],
+      "keys": [["x", "x", 3], ["x", "y", 1], ["x", "y", 2]]
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.jsonlt.org/conformance/v1/report.schema.json",
+  "title": "JSONLT Conformance Report",
+  "description": "Schema for JSONLT conformance test reports",
+  "type": "object",
+  "required": ["$schema", "implementation", "profile", "suiteVersion", "timestamp", "results"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "const": "https://spec.jsonlt.org/conformance/v1/report.schema.json"
+    },
+    "implementation": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the implementation"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the implementation"
+        },
+        "language": {
+          "type": "string",
+          "description": "Programming language of the implementation"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to the implementation repository or documentation"
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["parser", "generator"]
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Conformance profiles claimed by this implementation"
+    },
+    "optionalFeatures": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["recovery", "transactions", "compaction"]
+      },
+      "uniqueItems": true,
+      "description": "Optional features supported by this implementation"
+    },
+    "suiteVersion": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Version of the conformance test suite (e.g., v1.0.0)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the report was generated"
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "os": {
+          "type": "string",
+          "description": "Operating system"
+        },
+        "arch": {
+          "type": "string",
+          "description": "CPU architecture"
+        },
+        "runtime": {
+          "type": "string",
+          "description": "Runtime version (e.g., Python 3.12, Node.js 20)"
+        }
+      },
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "passed", "failed", "skipped"],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of tests"
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that passed"
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that failed"
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that were skipped"
+        }
+      },
+      "additionalProperties": false
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/suiteResult"
+      },
+      "description": "Results organized by test suite"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "suiteResult": {
+      "type": "object",
+      "required": ["suite", "tests"],
+      "properties": {
+        "suite": {
+          "type": "string",
+          "description": "Name of the test suite (e.g., format, state, keys)"
+        },
+        "summary": {
+          "type": "object",
+          "required": ["total", "passed", "failed", "skipped"],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "passed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skipped": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/testResult"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "testResult": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Test identifier matching the test case id"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "skip"],
+          "description": "Test result status"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Test execution duration in milliseconds"
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message or skip reason"
+        },
+        "expected": {
+          "description": "Expected value (for failed tests)"
+        },
+        "actual": {
+          "description": "Actual value received (for failed tests)"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

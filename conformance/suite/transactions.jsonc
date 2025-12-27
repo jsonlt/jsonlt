@@ -1,0 +1,224 @@
+{
+  "$schema": "https://spec.jsonlt.org/conformance/v1/suite.schema.json",
+  "suite": "transactions",
+  "tests": [
+    {
+      "id": "tx-isolation-read",
+      "description": "Reads within transaction see transaction writes",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 2}},
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}}
+      ],
+      "commit": true,
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}}
+      ]
+    },
+    {
+      "id": "tx-abort-discards",
+      "description": "Abort discards transaction changes",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 2}},
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}}
+      ],
+      "commit": false,
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 1}}
+      ]
+    },
+    {
+      "id": "tx-commit-new-record",
+      "description": "Commit persists new record",
+      "key": "id",
+      "setup": [],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 1}},
+        {"op": "has", "key": "alice", "returns": true}
+      ],
+      "commit": true,
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 1}}
+      ]
+    },
+    {
+      "id": "tx-commit-delete",
+      "description": "Commit persists delete",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "delete", "key": "alice", "returns": true},
+        {"op": "has", "key": "alice", "returns": false}
+      ],
+      "commit": true,
+      "after": [
+        {"op": "has", "key": "alice", "returns": false}
+      ]
+    },
+    {
+      "id": "tx-multiple-writes",
+      "description": "Transaction can buffer multiple writes",
+      "key": "id",
+      "setup": [],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 1}},
+        {"op": "put", "record": {"id": "bob", "v": 2}},
+        {"op": "put", "record": {"id": "carol", "v": 3}},
+        {"op": "count", "returns": 3}
+      ],
+      "commit": true,
+      "after": [
+        {"op": "count", "returns": 3},
+        {"op": "keys", "returns": ["alice", "bob", "carol"]}
+      ]
+    },
+    {
+      "id": "tx-nested-rejected",
+      "description": "Nested transactions are rejected (SHALL per spec)",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 1}}
+      ],
+      "nestedAttempt": true,
+      "error": "TRANSACTION_ERROR"
+    },
+    {
+      "id": "tx-conflict-same-key",
+      "description": "Conflict detected when external process modifies same key (SHALL per spec)",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 2}}
+      ],
+      "externalModifications": [
+        {"op": "put", "record": {"id": "alice", "v": 99}}
+      ],
+      "commit": true,
+      "error": "CONFLICT_ERROR",
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 99}}
+      ]
+    },
+    {
+      "id": "tx-conflict-delete-vs-update",
+      "description": "Conflict detected when transaction deletes key that external process updated",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "delete", "key": "alice", "returns": true}
+      ],
+      "externalModifications": [
+        {"op": "put", "record": {"id": "alice", "v": 99}}
+      ],
+      "commit": true,
+      "error": "CONFLICT_ERROR",
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 99}}
+      ]
+    },
+    {
+      "id": "tx-no-conflict-different-keys",
+      "description": "No conflict when transaction and external process modify different keys",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}},
+        {"op": "put", "record": {"id": "bob", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 2}}
+      ],
+      "externalModifications": [
+        {"op": "put", "record": {"id": "bob", "v": 99}}
+      ],
+      "commit": true,
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}},
+        {"op": "get", "key": "bob", "returns": {"id": "bob", "v": 99}}
+      ]
+    },
+    {
+      "id": "tx-empty-buffer-commit",
+      "description": "Empty transaction buffer can be committed",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [],
+      "commit": true,
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 1}}
+      ]
+    },
+    {
+      "id": "tx-conflict-update-vs-delete",
+      "description": "Conflict detected when transaction updates key that external process deleted",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 2}}
+      ],
+      "externalModifications": [
+        {"op": "delete", "key": "alice", "returns": true}
+      ],
+      "commit": true,
+      "error": "CONFLICT_ERROR",
+      "after": [
+        {"op": "has", "key": "alice", "returns": false}
+      ]
+    },
+    {
+      "id": "tx-conflict-both-create",
+      "description": "Conflict detected when both transaction and external process create same new key",
+      "key": "id",
+      "setup": [],
+      "transaction": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "externalModifications": [
+        {"op": "put", "record": {"id": "alice", "v": 99}}
+      ],
+      "commit": true,
+      "error": "CONFLICT_ERROR",
+      "after": [
+        {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 99}}
+      ]
+    },
+    {
+      "id": "tx-conflict-both-delete",
+      "description": "Conflict detected when both transaction and external process delete same key",
+      "key": "id",
+      "setup": [
+        {"op": "put", "record": {"id": "alice", "v": 1}}
+      ],
+      "transaction": [
+        {"op": "delete", "key": "alice", "returns": true}
+      ],
+      "externalModifications": [
+        {"op": "delete", "key": "alice", "returns": true}
+      ],
+      "commit": true,
+      "error": "CONFLICT_ERROR",
+      "after": [
+        {"op": "has", "key": "alice", "returns": false}
+      ]
+    }
+  ]
+}
