@@ -39,6 +39,7 @@ build-conformance-suite:
 
 # Clean all build artifacts
 clean: clean-spec clean-conformance-spec
+  rm -fr {{build_dir}}
 
 # Clean specification build artifacts
 clean-spec:
@@ -150,3 +151,7 @@ validate-spec-links:
 # Sync Vale styles and dictionaries
 vale-sync:
   vale sync
+
+# Watch for changes and rebuild automatically
+watch:
+  watchfiles 'just build' spec/ conformance/
