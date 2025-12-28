@@ -146,6 +146,7 @@
       "oneOf": [
         { "type": "string" },
         { "type": "integer" },
+        { "type": "null" },
         {
           "type": "array",
           "items": {
@@ -156,7 +157,7 @@
           }
         }
       ],
-      "description": "A key value (string, integer, or tuple)"
+      "description": "A key value (string, integer, null for rejection tests, or tuple)"
     },
     "errorCategory": {
       "type": "string",
@@ -169,7 +170,7 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": ["put", "get", "has", "delete", "all", "keys", "count", "clear", "compact"]
+          "enum": ["put", "get", "has", "delete", "all", "keys", "count", "clear", "compact", "find", "findOne"]
         }
       },
       "allOf": [
@@ -281,6 +282,44 @@
             "properties": {
               "returns": { "const": null }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "find" } }
+          },
+          "then": {
+            "properties": {
+              "predicate": {
+                "type": "string",
+                "description": "JavaScript-like predicate expression"
+              },
+              "returns": {
+                "type": "array",
+                "items": { "type": "object" }
+              }
+            },
+            "required": ["predicate"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "findOne" } }
+          },
+          "then": {
+            "properties": {
+              "predicate": {
+                "type": "string",
+                "description": "JavaScript-like predicate expression"
+              },
+              "returns": {
+                "oneOf": [
+                  { "type": "object" },
+                  { "type": "null" }
+                ]
+              }
+            },
+            "required": ["predicate"]
           }
         }
       ]

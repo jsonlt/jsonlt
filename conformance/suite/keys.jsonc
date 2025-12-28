@@ -347,6 +347,77 @@
         "{\"a\": \"x\", \"b\": \"x\", \"c\": 3, \"v\": 3}"
       ],
       "keys": [["x", "x", 3], ["x", "y", 1], ["x", "y", 2]]
+    },
+    {
+      "id": "key-infinity-rejected",
+      "description": "Key field containing Infinity is rejected (SHALL per spec §4.1)",
+      "key": "id",
+      "input": ["{\"id\": 1e309, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-negative-infinity-rejected",
+      "description": "Key field containing -Infinity is rejected (SHALL per spec §4.1)",
+      "key": "id",
+      "input": ["{\"id\": -1e309, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-compound-float-element-rejected",
+      "description": "Compound key with non-integer float element is rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"id\": 1.5, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-compound-boolean-element-rejected",
+      "description": "Compound key with boolean element is rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"id\": true, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-compound-object-element-rejected",
+      "description": "Compound key with object element is rejected",
+      "key": ["org", "id"],
+      "input": ["{\"org\": \"acme\", \"id\": {\"nested\": true}, \"v\": 1}"],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "key-order-cross-type-integers-before-strings",
+      "description": "Mixed-type key list orders integers before strings",
+      "key": "id",
+      "input": [
+        "{\"id\": \"z\", \"v\": 1}",
+        "{\"id\": 1, \"v\": 2}",
+        "{\"id\": \"a\", \"v\": 3}",
+        "{\"id\": 100, \"v\": 4}"
+      ],
+      "keys": [1, 100, "a", "z"]
+    },
+    {
+      "id": "key-order-strings-before-tuples",
+      "description": "Strings sort before tuples when comparing cross-type",
+      "key": "id",
+      "input": [
+        "{\"id\": \"z\", \"v\": 1}"
+      ],
+      "keys": ["z"]
+    },
+    {
+      "id": "key-order-tuple-prefix",
+      "description": "Shorter tuples sort before longer tuples with matching prefix",
+      "key": ["a", "b"],
+      "input": [
+        "{\"a\": \"x\", \"b\": 1, \"v\": 1}",
+        "{\"a\": \"x\", \"b\": 2, \"v\": 2}"
+      ],
+      "keys": [["x", 1], ["x", 2]]
     }
   ]
 }

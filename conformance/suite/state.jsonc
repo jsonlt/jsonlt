@@ -189,6 +189,92 @@
       "state": {
         "alice": {"id": "alice"}
       }
+    },
+    {
+      "id": "state-multiple-updates-same-key",
+      "description": "Multiple updates to same key result in final value",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"v\": 1}",
+        "{\"id\": \"alice\", \"v\": 2}",
+        "{\"id\": \"alice\", \"v\": 3}",
+        "{\"id\": \"alice\", \"v\": 4}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "v": 4}
+      }
+    },
+    {
+      "id": "state-tombstone-then-update",
+      "description": "Delete followed by reinsert results in new value",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"v\": 1}",
+        "{\"$deleted\": true, \"id\": \"alice\"}",
+        "{\"id\": \"alice\", \"v\": 2}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "v": 2}
+      }
+    },
+    {
+      "id": "state-multiple-tombstones-same-key",
+      "description": "Multiple tombstones for same key are idempotent",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"v\": 1}",
+        "{\"$deleted\": true, \"id\": \"alice\"}",
+        "{\"$deleted\": true, \"id\": \"alice\"}"
+      ],
+      "state": {}
+    },
+    {
+      "id": "state-compound-key-partial-match",
+      "description": "Compound keys with one matching field are distinct",
+      "key": ["org", "id"],
+      "input": [
+        "{\"org\": \"acme\", \"id\": 1, \"name\": \"alice\"}",
+        "{\"org\": \"acme\", \"id\": 2, \"name\": \"bob\"}",
+        "{\"org\": \"globex\", \"id\": 1, \"name\": \"carol\"}"
+      ],
+      "state": {
+        "[\"acme\",1]": {"org": "acme", "id": 1, "name": "alice"},
+        "[\"acme\",2]": {"org": "acme", "id": 2, "name": "bob"},
+        "[\"globex\",1]": {"org": "globex", "id": 1, "name": "carol"}
+      }
+    },
+    {
+      "id": "state-null-values-preserved",
+      "description": "Null values in record fields are preserved",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"email\": null, \"active\": true}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "email": null, "active": true}
+      }
+    },
+    {
+      "id": "state-empty-object-field",
+      "description": "Empty object field values are preserved",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"meta\": {}}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "meta": {}}
+      }
+    },
+    {
+      "id": "state-empty-array-field",
+      "description": "Empty array field values are preserved",
+      "key": "id",
+      "input": [
+        "{\"id\": \"alice\", \"tags\": []}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "tags": []}
+      }
     }
   ]
 }

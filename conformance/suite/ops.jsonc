@@ -230,6 +230,133 @@
       "steps": [
         {"op": "has", "key": [], "error": "KEY_ERROR"}
       ]
+    },
+    {
+      "id": "ops-find-empty",
+      "description": "Find returns empty array when no records match",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "role": "user"}, "returns": null},
+        {"op": "find", "predicate": "record.role === 'guest'", "returns": []}
+      ]
+    },
+    {
+      "id": "ops-find-single-match",
+      "description": "Find returns array with single matching record",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "role": "user"}, "returns": null},
+        {"op": "find", "predicate": "record.role === 'admin'", "returns": [{"id": "alice", "role": "admin"}]}
+      ]
+    },
+    {
+      "id": "ops-find-multiple-matches",
+      "description": "Find returns all matching records in key order",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "user"}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "role": "admin"}, "returns": null},
+        {"op": "put", "record": {"id": "carol", "role": "user"}, "returns": null},
+        {"op": "find", "predicate": "record.role === 'user'", "returns": [{"id": "alice", "role": "user"}, {"id": "carol", "role": "user"}]}
+      ]
+    },
+    {
+      "id": "ops-find-all-true",
+      "description": "Find with always-true predicate returns all records",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "v": 2}, "returns": null},
+        {"op": "find", "predicate": "true", "returns": [{"id": "alice", "v": 1}, {"id": "bob", "v": 2}]}
+      ]
+    },
+    {
+      "id": "ops-findone-empty",
+      "description": "FindOne returns null when no records match",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "findOne", "predicate": "record.role === 'guest'", "returns": null}
+      ]
+    },
+    {
+      "id": "ops-findone-single-match",
+      "description": "FindOne returns first matching record",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "alice", "role": "admin"}, "returns": null},
+        {"op": "put", "record": {"id": "bob", "role": "user"}, "returns": null},
+        {"op": "findOne", "predicate": "record.role === 'admin'", "returns": {"id": "alice", "role": "admin"}}
+      ]
+    },
+    {
+      "id": "ops-findone-multiple-matches-returns-first",
+      "description": "FindOne returns first matching record by key order",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "bob", "role": "user"}, "returns": null},
+        {"op": "put", "record": {"id": "alice", "role": "user"}, "returns": null},
+        {"op": "put", "record": {"id": "carol", "role": "user"}, "returns": null},
+        {"op": "findOne", "predicate": "record.role === 'user'", "returns": {"id": "alice", "role": "user"}}
+      ]
+    },
+    {
+      "id": "ops-get-null-key-rejected",
+      "description": "Get rejects null key value",
+      "key": "id",
+      "steps": [
+        {"op": "get", "key": null, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-has-null-key-rejected",
+      "description": "Has rejects null key value",
+      "key": "id",
+      "steps": [
+        {"op": "has", "key": null, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-delete-null-key-rejected",
+      "description": "Delete rejects null key value",
+      "key": "id",
+      "steps": [
+        {"op": "delete", "key": null, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-invalid-key-type-object",
+      "description": "Put rejects records with object key value",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": {"nested": true}, "name": "alice"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-invalid-key-type-array",
+      "description": "Put rejects records with array key value",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": [1, 2], "name": "alice"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-invalid-key-type-boolean",
+      "description": "Put rejects records with boolean key value",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": true, "name": "alice"}, "error": "KEY_ERROR"}
+      ]
+    },
+    {
+      "id": "ops-put-invalid-key-type-float",
+      "description": "Put rejects records with non-integer float key value",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": 1.5, "name": "alice"}, "error": "KEY_ERROR"}
+      ]
     }
   ]
 }

@@ -190,6 +190,78 @@
       "input": ["{\"id\": 1, \"d\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}"],
       "expect": "reject",
       "error": "LIMIT_ERROR"
+    },
+    {
+      "id": "format-not-object-string",
+      "description": "JSON string value (not object) is rejected",
+      "key": "id",
+      "input": ["\"just a string\""],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-not-object-number",
+      "description": "JSON number value (not object) is rejected",
+      "key": "id",
+      "input": ["42"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-not-object-boolean-true",
+      "description": "JSON boolean true (not object) is rejected",
+      "key": "id",
+      "input": ["true"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-not-object-boolean-false",
+      "description": "JSON boolean false (not object) is rejected",
+      "key": "id",
+      "input": ["false"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-not-object-null",
+      "description": "JSON null value (not object) is rejected",
+      "key": "id",
+      "input": ["null"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-null",
+      "description": "$deleted with null value is rejected",
+      "key": "id",
+      "input": ["{\"$deleted\": null, \"id\": 1}"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-number",
+      "description": "$deleted with number value is rejected",
+      "key": "id",
+      "input": ["{\"$deleted\": 1, \"id\": 1}"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-array",
+      "description": "$deleted with array value is rejected",
+      "key": "id",
+      "input": ["{\"$deleted\": [], \"id\": 1}"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
+    },
+    {
+      "id": "format-deleted-object",
+      "description": "$deleted with object value is rejected",
+      "key": "id",
+      "input": ["{\"$deleted\": {}, \"id\": 1}"],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
     }
   ]
 }

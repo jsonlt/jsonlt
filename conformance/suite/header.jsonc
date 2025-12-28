@@ -376,6 +376,68 @@
       ],
       "expect": "reject",
       "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-nested-array-rejected",
+      "description": "Header with nested array in key specifier is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [[\"id\"]]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-array-with-null-rejected",
+      "description": "Header with null in key specifier array is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\", null]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-array-with-boolean-rejected",
+      "description": "Header with boolean in key specifier array is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\", true]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-array-with-object-rejected",
+      "description": "Header with object in key specifier array is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"id\", {}]}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "header-key-empty-string-valid",
+      "description": "Header with empty string in key specifier array is valid",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": [\"\", \"id\"]}}",
+        "{\"\": \"x\", \"id\": 1, \"name\": \"test\"}"
+      ],
+      "expect": "accept",
+      "state": {
+        "[\"x\",1]": {"": "x", "id": 1, "name": "test"}
+      }
+    },
+    {
+      "id": "header-version-large-unsupported",
+      "description": "Header with large unsupported version number is rejected",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 999, \"key\": \"id\"}}",
+        "{\"id\": 1}"
+      ],
+      "expect": "reject",
+      "error": "PARSE_ERROR"
     }
   ]
 }

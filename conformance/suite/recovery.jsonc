@@ -77,6 +77,39 @@
         "2": {"id": 2},
         "3": {"id": 3}
       }
+    },
+    {
+      "id": "recovery-leading-whitespace-not-stripped",
+      "description": "Parser does not strip leading whitespace (invalid JSON)",
+      "key": "id",
+      "input": "  {\"id\": 1}\n",
+      "state": {}
+    },
+    {
+      "id": "recovery-dollar-prefixed-preserved",
+      "description": "Parser preserves unrecognized $-prefixed fields for forward compatibility (SHOULD per spec)",
+      "key": "id",
+      "input": "{\"id\": 1, \"$futureField\": \"value\"}\n",
+      "state": {
+        "1": {"id": 1, "$futureField": "value"}
+      }
+    },
+    {
+      "id": "recovery-cr-only-not-recovered",
+      "description": "Parser does not treat standalone CR as line terminator",
+      "key": "id",
+      "input": "{\"id\": 1}\r{\"id\": 2}\n",
+      "state": {}
+    },
+    {
+      "id": "recovery-valid-json-after-bom",
+      "description": "Parser accepts valid JSON following stripped BOM",
+      "key": "id",
+      "inputBase64": "77u/eyJpZCI6IDEsICJuYW1lIjogInRlc3QifQp7ImlkIjogMiwgIm5hbWUiOiAidGVzdDIifQo=",
+      "state": {
+        "1": {"id": 1, "name": "test"},
+        "2": {"id": 2, "name": "test2"}
+      }
     }
   ]
 }

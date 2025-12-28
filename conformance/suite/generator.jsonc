@@ -232,6 +232,81 @@
         "[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]": {"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16}
       },
       "expect": "accept"
+    },
+    {
+      "id": "generator-null-key-rejected",
+      "description": "Generator rejects records with null key value",
+      "key": "id",
+      "record": {"id": null, "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-boolean-key-rejected",
+      "description": "Generator rejects records with boolean key value",
+      "key": "id",
+      "record": {"id": true, "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-array-key-rejected",
+      "description": "Generator rejects records with array key value (non-tuple)",
+      "key": "id",
+      "record": {"id": [1, 2], "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-object-key-rejected",
+      "description": "Generator rejects records with object key value",
+      "key": "id",
+      "record": {"id": {"nested": true}, "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-float-key-rejected",
+      "description": "Generator rejects records with non-integer float key value",
+      "key": "id",
+      "record": {"id": 1.5, "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-missing-key-field-rejected",
+      "description": "Generator rejects records missing key field",
+      "key": "id",
+      "record": {"name": "alice", "v": 1},
+      "expect": "reject",
+      "error": "KEY_ERROR"
+    },
+    {
+      "id": "generator-compound-key-sorted",
+      "description": "Generator sorts records by compound key in correct order",
+      "key": ["org", "id"],
+      "state": {
+        "[\"b\",1]": {"org": "b", "id": 1, "v": 1},
+        "[\"a\",2]": {"org": "a", "id": 2, "v": 2},
+        "[\"a\",1]": {"org": "a", "id": 1, "v": 3}
+      },
+      "outputMatches": "\\{\"id\":1,\"org\":\"a\".*\\n\\{\"id\":2,\"org\":\"a\".*\\n\\{\"id\":1,\"org\":\"b\""
+    },
+    {
+      "id": "generator-empty-file-no-output",
+      "description": "Generator produces no output for empty state (no trailing newline for empty files)",
+      "key": "id",
+      "state": {},
+      "outputExact": ""
+    },
+    {
+      "id": "generator-nested-array-sorted",
+      "description": "Generator sorts arrays within records (elements in original order)",
+      "key": "id",
+      "state": {
+        "1": {"id": 1, "tags": ["b", "a", "c"]}
+      },
+      "outputMatches": "\"tags\":\\[\"b\",\"a\",\"c\"\\]"
     }
   ]
 }

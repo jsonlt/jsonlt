@@ -66,6 +66,57 @@
         {"op": "compact", "returns": null},
         {"op": "count", "returns": 0}
       ]
+    },
+    {
+      "id": "compact-compound-key",
+      "description": "Compact works correctly with compound keys",
+      "key": ["org", "id"],
+      "steps": [
+        {"op": "put", "record": {"org": "acme", "id": 1, "name": "alice"}, "returns": null},
+        {"op": "put", "record": {"org": "acme", "id": 2, "name": "bob"}, "returns": null},
+        {"op": "put", "record": {"org": "globex", "id": 1, "name": "carol"}, "returns": null},
+        {"op": "delete", "key": ["acme", 2], "returns": true},
+        {"op": "compact", "returns": null},
+        {"op": "count", "returns": 2},
+        {"op": "keys", "returns": [["acme", 1], ["globex", 1]]}
+      ]
+    },
+    {
+      "id": "compact-sorted-output",
+      "description": "Compact produces records sorted by key",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "zebra", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": "apple", "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "mango", "v": 3}, "returns": null},
+        {"op": "compact", "returns": null},
+        {"op": "keys", "returns": ["apple", "mango", "zebra"]}
+      ]
+    },
+    {
+      "id": "compact-integer-keys-sorted",
+      "description": "Compact sorts integer keys numerically",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": 10, "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": 2, "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": 100, "v": 3}, "returns": null},
+        {"op": "compact", "returns": null},
+        {"op": "keys", "returns": [2, 10, 100]}
+      ]
+    },
+    {
+      "id": "compact-mixed-key-types",
+      "description": "Compact sorts mixed key types (integers before strings)",
+      "key": "id",
+      "steps": [
+        {"op": "put", "record": {"id": "z", "v": 1}, "returns": null},
+        {"op": "put", "record": {"id": 1, "v": 2}, "returns": null},
+        {"op": "put", "record": {"id": "a", "v": 3}, "returns": null},
+        {"op": "put", "record": {"id": 10, "v": 4}, "returns": null},
+        {"op": "compact", "returns": null},
+        {"op": "keys", "returns": [1, 10, "a", "z"]}
+      ]
     }
   ]
 }
