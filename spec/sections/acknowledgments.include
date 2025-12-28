@@ -1,0 +1,105 @@
+Acknowledgments {#acks}
+=======================
+
+<em>This section is non-normative.</em>
+
+This specification was developed with input from contributors who reviewed drafts and provided feedback. The design was informed by related work including [[BEADS]], which uses JSONL for git-backed structured storage.
+
+The notation conventions used in the [[#api]] section were inspired by [[RFC9622]], which provides a model for describing abstract interfaces in a language-agnostic manner.
+
+AI assistance disclosure {#ai-assistance}
+-----------------------------------------
+
+The development of this specification involved the use of AI language models, specifically Claude (Anthropic). AI tools contributed to the following aspects of this work:
+
+* Drafting and refining specification prose
+* Reviewing document structure and consistency
+* Generating test case scenarios
+* Exploring edge cases and potential ambiguities in the design
+
+All normative requirements, technical design decisions, and final specification text were determined by human authors. AI-generated content was reviewed, edited, and validated against the specification's design goals. The authors take full responsibility for the technical accuracy and correctness of this document.
+
+This disclosure is provided in the interest of transparency regarding modern specification development practices.
+
+<pre class="biblio">
+{
+  "BEADS": {
+    "authors": ["Steve Yegge"],
+    "title": "Beads: Distributed, git-backed graph issue tracker for AI agents",
+    "href": "https://github.com/steveyegge/beads"
+  },
+  "IEEE754": {
+    "title": "IEEE Standard for Floating-Point Arithmetic",
+    "href": "https://ieeexplore.ieee.org/document/8766229",
+    "publisher": "IEEE",
+    "date": "2019"
+  },
+  "JSONL": {
+    "authors": ["Ian Ward"],
+    "title": "JSON Lines",
+    "href": "https://jsonlines.org/",
+    "publisher": "jsonlines.org",
+    "date": "Accessed December 2025"
+  },
+  "JSONLT-TESTS": {
+    "authors": ["Tony Burns"],
+    "title": "JSONLT 1.0 Conformance Test Suite",
+    "href": "https://spec.jsonlt.org/tests/",
+    "publisher": "jsonlt.org"
+  },
+  "RFC2119": {
+    "authors": ["S. Bradner"],
+    "title": "Key words for use in RFCs to Indicate Requirement Levels",
+    "href": "https://www.rfc-editor.org/rfc/rfc2119",
+    "publisher": "IETF"
+  },
+  "RFC3629": {
+    "authors": ["F. Yergeau"],
+    "title": "UTF-8, a transformation format of ISO 10646",
+    "href": "https://www.rfc-editor.org/rfc/rfc3629",
+    "publisher": "IETF"
+  },
+  "RFC8174": {
+    "authors": ["B. Leiba"],
+    "title": "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words",
+    "href": "https://www.rfc-editor.org/rfc/rfc8174",
+    "publisher": "IETF"
+  },
+  "RFC6838": {
+    "authors": ["N. Freed", "J. Klensin", "T. Hansen"],
+    "title": "Media Type Specifications and Registration Procedures",
+    "href": "https://www.rfc-editor.org/rfc/rfc6838",
+    "publisher": "IETF"
+  },
+  "RFC8259": {
+    "authors": ["T. Bray"],
+    "title": "The JavaScript Object Notation (JSON) Data Interchange Format",
+    "href": "https://www.rfc-editor.org/rfc/rfc8259",
+    "publisher": "IETF"
+  },
+  "RFC7493": {
+    "authors": ["T. Bray"],
+    "title": "The I-JSON Message Format",
+    "href": "https://www.rfc-editor.org/rfc/rfc7493",
+    "publisher": "IETF"
+  },
+  "RFC8785": {
+    "authors": ["A. Rundgren", "B. Jordan", "S. Erdtman"],
+    "title": "JSON Canonicalization Scheme (JCS)",
+    "href": "https://www.rfc-editor.org/rfc/rfc8785",
+    "publisher": "IETF"
+  },
+  "JSON-SCHEMA": {
+    "authors": ["A. Wright", "H. Andrews", "B. Hutton", "G. Dennis"],
+    "title": "JSON Schema: A Media Type for Describing JSON Documents",
+    "href": "https://json-schema.org/draft/2020-12/json-schema-core",
+    "publisher": "JSON Schema"
+  },
+  "RFC9622": {
+    "authors": ["B. Trammell", "M. Welzl", "R. Enghardt", "G. Fairhurst", "M. Kühlewind", "C. Perkins", "P. Tiesel", "T. Pauly"],
+    "title": "A TAPS Interface to Transport Services",
+    "href": "https://www.rfc-editor.org/rfc/rfc9622",
+    "publisher": "IETF"
+  }
+}
+</pre>

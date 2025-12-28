@@ -1,0 +1,73 @@
+Conformance {#conformance-requirements}
+=======================================
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [[!RFC2119]] [[!RFC8174]] when, and only when, they appear in all capitals, as shown here.
+
+Implementations MAY conform as a parser, generator, or both, as defined in the following subsections. A conforming implementation MAY provide additional functionality not described here, provided such functionality does not alter the behavior of operations defined in this specification.
+
+Parser {#conformance-parser}
+----------------------------
+
+A <dfn>conforming parser</dfn> is an implementation that reads JSONLT files.
+
+A [=conforming parser=] SHALL:
+
+1. Accept any file that conforms to [[#physical-format]].
+1. Implement the [=read a table file=] and [=compute the logical state=] algorithms.
+1. Signal errors as defined in [[#exceptions]].
+
+A [=conforming parser=] SHOULD preserve unrecognized fields whose names begin with `$` to support forward compatibility with future specification versions.
+
+A [=conforming parser=] MAY accept non-conforming input, provided that it produces a diagnostic indicating the non-conformance and processes valid lines normally. A [=conforming parser=] MAY recover from the following deviations:
+
+* Files missing a trailing newline (process final line if valid JSON)
+* Empty lines (skip them)
+* Lines with trailing whitespace (strip before parsing)
+* CRLF line endings (strip CR before LF)
+* BOM at file start (strip it)
+* Tombstones with extra fields (ignore the extra fields)
+
+A [=conforming parser=] SHOULD NOT attempt recovery for:
+
+* Invalid JSON syntax (cannot determine record boundaries)
+* Invalid UTF-8 encoding (cannot decode content)
+* Unsupported version numbers (cannot interpret semantics)
+
+Note: This specification does not define separate "lenient parser" or "strict parser" profiles. A [=conforming parser=] MAY implement recovery for the deviations listed above; implementations that do so remain [=conforming parsers=]. An implementation that rejects non-conforming input outright is equally conforming.
+
+A [=conforming parser=] MAY omit write operations.
+
+Generator {#conformance-generator}
+----------------------------------
+
+A <dfn>conforming generator</dfn> is an implementation that writes JSONLT files.
+
+A [=conforming generator=] SHALL:
+
+1. Produce output that conforms to [[#physical-format]].
+1. Use [=deterministic serialization=] for all output.
+1. Reject records that violate [[#record]], including records with field names beginning with `$`.
+
+A [=conforming parser=] SHALL accept any file produced by a [=conforming generator=].
+
+A [=conforming generator=] MAY omit read operations.
+
+Claiming conformance {#claiming-conformance}
+--------------------------------------------
+
+An implementation claiming conformance to this specification SHOULD document:
+
+* Which profile(s) it conforms to ([=conforming parser=], [=conforming generator=], or both)
+* Which optional features it supports
+* Any implementation-specific limits ([=key length=], [=record size=], [=nesting depth=])
+* Any extensions or deviations from this specification
+
+Optional features that implementations MAY support include:
+
+* [=transaction|Transaction=] operations ([[#api-transaction]])
+* Unicode normalization of keys ([[#key-equality]])
+* Recovery from non-conforming input ([[#conformance-parser]])
+* JSON Schema validation of records ([[#header]])
+* Compaction ([[#algo-compact]])
+
+A conformance claim MAY use the form: "This implementation conforms to JSONLT 1.0 as a [parser&#124;generator&#124;parser and generator]."

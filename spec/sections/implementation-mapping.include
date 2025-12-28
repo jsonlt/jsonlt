@@ -1,0 +1,53 @@
+Implementation mapping {#appendix-implementation}
+=================================================
+
+<em>This section is non-normative.</em>
+
+This appendix provides guidance on mapping the abstract types and constructs defined in this specification to concrete implementations in various programming languages. The notation and type system are designed to be language-agnostic; implementations can adapt them to idiomatic constructs in their target language.
+
+Basic types {#impl-basic-types}
+-------------------------------
+
+**Integer**: Map to the platform's standard integer type. Implementations need to support the full range of JSON-safe integers (−(2<sup>53</sup>)+1 to (2<sup>53</sup>)−1, that is, ±9,007,199,254,740,991). Larger integer types are acceptable; smaller types that cannot represent this range are not conforming.
+
+Note: JSONLT's integer constraints align with [[RFC7493]] (I-JSON), which recommends the same range for interoperable JSON integers.
+
+**String**: Map to the platform's standard UTF-8 string type. All string comparisons are based on Unicode code points.
+
+**Boolean**: Map to the platform's standard boolean type (`true`/`false`, `True`/`False`, etc.).
+
+Compound types {#impl-compound-types}
+-------------------------------------
+
+**List&lt;T&gt;**: Map to the platform's standard ordered sequence type (array, list, vector, slice, etc.). The element type T is mapped according to these same rules.
+
+**Tuple**: Map to the platform's tuple type if available. Languages without native tuples can use arrays or custom structures. A tuple of (String, Integer) represents a compound key with two elements.
+
+**Map**: The [=logical state=] is a map from keys to records. Map to the platform's standard associative container (dictionary, hash map, object, etc.). Implementations can use ordered maps if key ordering is important for iteration.
+
+Null and optional values {#impl-null}
+-------------------------------------
+
+**T | Null**: Represents a value that may be absent. Map to the platform's standard optional or nullable type:
+
+* Languages with null: Use `null`, `nil`, or `None`
+* Languages with option types: Use `Option<T>`, `Maybe T`, or equivalent
+* Languages with result types: can use result types for operations that can fail
+
+Predicates {#impl-predicates}
+-----------------------------
+
+The `find` and `findOne` operations accept a predicate function. Map to the platform's standard callable type:
+
+* First-class functions or closures
+* Lambda expressions
+* Callable objects or interfaces
+
+The predicate receives a Record and returns a Boolean indicating whether the record matches.
+
+Thread safety {#impl-thread-safety}
+-----------------------------------
+
+Thread safety for concurrent access within a single process is an implementation concern and is not specified normatively. Implementations SHOULD document their thread safety properties and MAY provide options for enabling or disabling internal locking. Implementations MAY use synchronization mechanisms such as mutex locks, read-write locks, or atomic operations based on the target platform's threading model.
+
+Note: This specification addresses inter-process concurrency through file locking ([[#file-locking]]) because file integrity is an interoperability concern—two processes need to coordinate to avoid corrupting shared files. Intra-process thread safety, by contrast, is an internal implementation detail that does not affect file format interoperability.

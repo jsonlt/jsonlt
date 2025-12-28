@@ -1,0 +1,264 @@
+Table operations {#table-operations}
+====================================
+
+Getting a record {#algo-get}
+----------------------------
+
+<div algorithm>
+To <dfn>get a record</dfn> for |key| from a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. If |state| contains |key|, return |state|[|key|].
+1. Otherwise, return null.
+
+</div>
+
+Checking for a record {#algo-has}
+---------------------------------
+
+<div algorithm>
+To <dfn>check for a record</dfn> for |key| in a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Return true if |state| contains |key|, false otherwise.
+
+</div>
+
+Getting all records {#algo-all}
+-------------------------------
+
+<div algorithm>
+To <dfn>get all records</dfn> from a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Let |keys| be all keys in |state|, sorted in ascending order.
+1. Let |result| be an empty list.
+1. For each |key| in |keys|:
+    1. Append |state|[|key|] to |result|.
+1. Return |result|.
+
+</div>
+
+Getting all keys {#algo-keys}
+-----------------------------
+
+<div algorithm>
+To <dfn>get all keys</dfn> from a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Let |keys| be all keys in |state|, sorted in ascending order.
+1. Return |keys|.
+
+</div>
+
+Counting records {#algo-count}
+------------------------------
+
+<div algorithm>
+To <dfn>count records</dfn> in a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Return the number of records in |state|.
+
+</div>
+
+Finding records {#algo-find}
+----------------------------
+
+<div algorithm>
+To <dfn>find records</dfn> matching |predicate| in a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Let |keys| be all keys in |state|, sorted in ascending order.
+1. Let |results| be an empty list.
+1. For each |key| in |keys|:
+    1. Let |record| be |state|[|key|].
+    1. If |predicate|(|record|) is true, append |record| to |results|.
+1. Return |results|.
+
+</div>
+
+Finding one record {#algo-find-one}
+-----------------------------------
+
+<div algorithm>
+To <dfn>find one record</dfn> matching |predicate| in a [=table=]:
+
+1. Let |state| be the table's [=logical state=].
+1. Let |keys| be all keys in |state|, sorted in ascending order.
+1. For each |key| in |keys|:
+    1. Let |record| be |state|[|key|].
+    1. If |predicate|(|record|) is true, return |record|.
+1. Return null.
+
+</div>
+
+Implementations SHALL signal an error if |predicate| cannot be invoked as a function. If |predicate| returns a value that is not a boolean, the implementation SHOULD coerce the value to boolean using the language's standard truthiness semantics (where null, zero, and empty string typically evaluate to false); alternatively, the implementation MAY signal an error for non-boolean returns.
+
+If the |predicate| function throws an exception during [=find records=] or [=find one record=], the implementation SHALL propagate the exception to the caller without returning partial results. Within a [=transaction=], a predicate exception does not affect the transaction's state; the transaction remains usable after the exception is handled.
+
+<div class="example">
+Using `find` to query records matching a predicate. Given a table with key specifier `"id"` and the following [=logical state=]:
+
+| Key | Record |
+|-----|--------|
+| `1` | `{"id": 1, "role": "admin", "active": true}` |
+| `2` | `{"id": 2, "role": "user", "active": false}` |
+| `3` | `{"id": 3, "role": "user", "active": true}` |
+
+Calling `table.find(record => record.active == true)` returns:
+
+```json
+[
+  {"id": 1, "role": "admin", "active": true},
+  {"id": 3, "role": "user", "active": true}
+]
+```
+
+Records are returned in ascending key order (1, then 3). Record with key 2 is excluded because `active` is false.
+
+Calling `table.findOne(record => record.role == "user")` returns:
+
+```json
+{"id": 2, "role": "user", "active": false}
+```
+
+The first matching record by key order is returned. Although record 3 also matches, `findOne` stops at the first match.
+
+Calling `table.findOne(record => record.role == "moderator")` returns null because no record matches.
+</div>
+
+Putting a record {#algo-put}
+----------------------------
+
+<div algorithm>
+To <dfn>put a record</dfn> |record| into a [=table=]:
+
+1. If |record| is not a [=JSON object=], return an error.
+1. Let |key| be the result of [=extracting a key=] from |record| using the table's [=key specifier=].
+1. If extraction fails, return an error.
+1. If the [=key length=] of |key| exceeds the implementation's maximum, return a [=limit error=].
+1. If |record| contains any field whose name begins with `$`, return an error.
+1. Serialize |record| to a JSON line using [=deterministic serialization=].
+1. If the [=record size=] exceeds the implementation's maximum, return a [=limit error=].
+1. Acquire the exclusive file lock.
+1. If auto-reload is enabled and the file has been modified since last load, reload the file.
+1. Append the line (followed by newline) to the table's file.
+1. Update the table's [=logical state=]: set state[|key|] to |record|.
+1. Release the lock.
+
+</div>
+
+Deleting a record {#algo-delete}
+--------------------------------
+
+<div algorithm>
+To <dfn>delete a record</dfn> for |key| from a [=table=]:
+
+1. If |key| is not a [=valid key=], return a [=key error=] indicating invalid key type.
+1. If the [=key specifier=] is a [=tuple=] with more than one element:
+    1. If |key| is not a [=tuple=] with the same number of elements as the [=key specifier=], return a [=key error=].
+1. If the [=key specifier=] is a [=string=] or a single-element [=tuple=]:
+    1. If |key| is a [=tuple=], return a [=key error=].
+1. Let |existed| be true if the table's [=logical state=] contains |key|, false otherwise.
+1. Let |tombstone| be a new object.
+1. Set |tombstone|["$deleted"] to true.
+1. If the [=key specifier=] is a [=string=]:
+    1. Let |field| be the [=key specifier=].
+    1. Set |tombstone|[|field|] to |key|.
+1. If the [=key specifier=] is a [=tuple=] with exactly one element:
+    1. Let |field| be the single element of the [=key specifier=].
+    1. Set |tombstone|[|field|] to |key|.
+1. If the [=key specifier=] is a [=tuple=] with more than one element:
+    1. For each |field| in the [=key specifier=] and corresponding |value| in |key|:
+        1. Set |tombstone|[|field|] to |value|.
+1. Assert: The [=key specifier=] is one of: a [=string=], a single-element [=tuple=], or a multi-element [=tuple=]. The preceding steps are exhaustive.
+1. Acquire the exclusive file lock.
+1. If auto-reload is enabled and the file has been modified since last load, reload the file.
+1. Serialize |tombstone| to a JSON line using [=deterministic serialization=].
+1. Append the line (followed by newline) to the table's file.
+1. Update the table's [=logical state=]: remove |key| from state.
+1. Release the lock.
+1. Return |existed|.
+
+</div>
+
+Note: The <var ignore>existed</var> return value is informational and reflects the table's state at the time the delete operation began, not at the time the tombstone was written. In concurrent scenarios with auto-reload enabled, the record could have been created or deleted by another process between the existence check and the file modification. Applications requiring an authoritative answer about whether a record was actually deleted can use a transaction, which provides snapshot isolation.
+
+Note: Deleting a non-existent key is valid and writes a tombstone to the file. This idempotent design allows delete operations to be safely replayed (for example, during synchronization or recovery) without requiring the caller to first check whether the key exists. The tombstone has no effect on the [=logical state=] if the key was already absent.
+
+Clearing all records {#algo-clear}
+----------------------------------
+
+<div algorithm>
+To <dfn>clear all records</dfn> from a [=table=]:
+
+1. Acquire the exclusive file lock.
+1. Let |lines| be an empty [=list=].
+1. If the table has a [=header=]:
+    1. Serialize the header to a JSON line.
+    1. Append the header line to |lines|.
+1. Write |lines| to a temporary file in the same directory, with each line followed by a newline (or write an empty file if no header).
+1. Sync the temporary file to disk (fsync or equivalent).
+1. Atomically rename the temporary file to replace the table's file. (On POSIX systems, this is the `rename()` system call; on Windows, `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING`.)
+1. Set the table's [=logical state=] to an empty [=map=].
+1. Release the lock.
+
+</div>
+
+This produces an empty file (or a file containing only the [=header=]).
+
+Compacting a table {#algo-compact}
+----------------------------------
+
+<div algorithm>
+To <dfn>compact a table</dfn>:
+
+1. Acquire the exclusive file lock.
+1. Reload the file to ensure the [=logical state=] reflects any writes that occurred before the lock was acquired.
+1. Let |state| be the table's [=logical state=].
+1. Let |keys| be all keys in |state|, sorted in ascending order.
+1. Let |lines| be an empty list.
+1. If the table has a [=header=]:
+    1. Serialize the header to a JSON line.
+    1. Append the header line to |lines|.
+1. For each |key| in |keys|:
+    1. Let |record| be |state|[|key|].
+    1. Serialize |record| to a JSON line using [=deterministic serialization=].
+    1. Append the line to |lines|.
+1. Write |lines| to a temporary file in the same directory, with each line followed by a newline.
+1. Sync the temporary file to disk (fsync or equivalent).
+1. Atomically rename the temporary file to replace the table's file.
+1. Release the lock.
+
+</div>
+
+Compaction produces a file with one line per live record (plus optional header), sorted by key, with no tombstones or historical operations.
+
+Note: When multiple processes attempt concurrent compaction, file locking serializes the operations. The second process will reload after acquiring the lock and can find the file already compacted; implementations can detect this by comparing file size or line count before and after reload, and skip redundant compaction.
+
+<div class="example">
+Before compaction, a file might contain the full operation history with non-alphabetical key ordering in records:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"role": "user", "id": "alice", "team": "eng"}
+{"id": "bob", "role": "user"}
+{"role": "admin", "id": "alice", "team": "eng"}
+{"id": "charlie", "role": "user"}
+{"$deleted": true, "id": "bob"}
+{"id": "charlie", "role": "moderator"}
+```
+
+After compaction, the file contains only the current state, sorted by key, with [=deterministic serialization=] applied (keys sorted alphabetically):
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": "alice", "role": "admin", "team": "eng"}
+{"id": "charlie", "role": "moderator"}
+```
+
+The historical operations (alice's initial role, bob's record, charlie's initial role) and the tombstone for bob are removed. Note how alice's record now has fields in alphabetical order (`id`, `role`, `team`).
+</div>
+
+On systems where atomic rename is not available or fails (for example, renaming across filesystems), a [=conforming generator=] SHALL use an alternative strategy that preserves atomicity, such as writing to a new file and updating a pointer, or SHALL report an error.

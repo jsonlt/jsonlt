@@ -1,0 +1,125 @@
+Exceptions {#exceptions}
+========================
+
+A [=conforming parser=] or [=conforming generator=] SHALL signal errors for the following conditions. Implementations SHOULD define specific error types or codes for each category.
+
+Parse errors (ParseError) {#exception-parse}
+-----------------------------------------
+
+A <dfn>parse error</dfn> is an error that occurs when reading a JSONLT file due to malformed content. A [=conforming parser=] SHALL signal a [=parse error=] for the following conditions:
+
+* The file contains byte sequences that are not valid UTF-8.
+* A line in the file is not valid JSON.
+* A line in the file is valid JSON but not a JSON object.
+* A JSON object contains duplicate keys.
+* A line contains `$deleted` with a value other than the boolean `true`.
+* A [=header=] appears at a position other than the first line.
+* A [=header=] contains a `$jsonlt` value that is not a JSON object.
+* A [=header=] is missing the REQUIRED `version` field.
+* A [=header=]'s `version` field is not an integer.
+
+<div class="example">
+Examples of invalid JSONLT content that would cause parse errors:
+
+Invalid JSON (missing closing brace):
+```
+{"id": "alice", "name": "Alice"
+```
+
+Valid JSON but not an object:
+```
+["id", "alice"]
+```
+
+Invalid `$deleted` value (requires boolean `true`):
+```
+{"$deleted": "yes", "id": "alice"}
+```
+
+Duplicate JSON keys:
+```
+{"id": "alice", "name": "Alice", "id": "bob"}
+```
+</div>
+
+Key errors (KeyError) {#exception-key}
+-----------------------------------
+
+A <dfn>key error</dfn> is an error that occurs when a key or key specifier is invalid or inconsistent. A [=conforming parser=] or [=conforming generator=] SHALL signal a [=key error=] for the following conditions:
+
+* A [=record=] provided to put does not contain the REQUIRED [=key fields=].
+* A [=key field=] contains a value that is not a [=valid key=] (null, boolean, object, or array).
+* A [=key field=] contains a number outside the valid integer key range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1].
+* A [=key field=] contains a number with a fractional component (not an integer).
+* A [=record=] provided to put contains a field whose name begins with `$`.
+* The [=key specifier=] provided when opening a table does not [=key specifier match|match=] the header's key specifier.
+* A [=key specifier=] [=tuple=] contains duplicate field names.
+* A [=key specifier=] or [=key=] is an empty [=tuple=] (zero elements).
+
+<div class="example">
+Examples of invalid records that would cause key errors (assuming key specifier `"id"`):
+
+Missing [=key field=]:
+```
+{"name": "Alice", "role": "admin"}
+```
+
+Invalid key type (null):
+```
+{"id": null, "name": "Alice"}
+```
+
+Invalid key type (boolean):
+```
+{"id": true, "name": "Alice"}
+```
+
+Reserved `$`-prefixed field in record:
+```
+{"id": "alice", "name": "Alice", "$custom": "data"}
+```
+</div>
+
+File errors (IOError) {#exception-io}
+----------------------------------
+
+An <dfn>IO error</dfn> is an error that occurs during file system operations. A [=conforming parser=] or [=conforming generator=] SHALL signal an [=IO error=] for the following conditions:
+
+* The file cannot be read due to permissions or I/O errors.
+* The file cannot be written due to permissions or I/O errors.
+* Atomic file replacement fails.
+
+Lock errors (LockError) {#exception-lock}
+--------------------------------------
+
+A <dfn>lock error</dfn> is an error that occurs when file locking fails. A [=conforming parser=] or [=conforming generator=] SHALL signal a [=lock error=] for the following conditions:
+
+* A file lock cannot be acquired within the configured timeout.
+
+Limit errors (LimitError) {#exception-limit}
+--------------------------------------------
+
+A <dfn>limit error</dfn> is an error signaled when content exceeds implementation limits.
+
+**Mandatory limits:** A [=conforming parser=] or [=conforming generator=] SHALL signal a [=limit error=] when:
+
+* A [=key=] exceeds the implementation's maximum [=key length=].
+* A [=record=] exceeds the implementation's maximum [=record size=].
+* JSON nesting depth exceeds the implementation's maximum depth.
+* A [=tuple=] key exceeds the implementation's maximum element count.
+
+**Optional limits:** A [=conforming parser=] or [=conforming generator=] MAY signal a [=limit error=] when:
+
+* The total number of records exceeds the implementation's capacity.
+
+Implementations SHALL document their limits.
+
+Transaction errors (TransactionError) {#exception-transaction}
+-----------------------------------------------------------
+
+A <dfn>conflict error</dfn> is an error that occurs when a [=transaction=] commit detects that another process has modified a key that the transaction also modified.
+
+A [=conforming parser=] or [=conforming generator=] implementing transactions SHALL signal the following transaction errors:
+
+* An attempt to start a nested [=transaction=].
+* A commit fails due to a [=conflict error=] (write-write conflict).

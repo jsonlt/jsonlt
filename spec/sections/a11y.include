@@ -1,0 +1,4 @@
+Accessibility considerations {#a11y}
+====================================
+
+This specification defines a data format with no direct user interface implications. Applications presenting data in this format are responsible for accessible rendering.

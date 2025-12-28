@@ -1,0 +1,136 @@
+Physical format {#physical-format}
+==================================
+
+Encoding {#encoding}
+--------------------
+
+A JSONLT file is a UTF-8 encoded text file without a byte order mark (BOM), conforming to [[!RFC8259]].
+
+A [=conforming generator=] SHALL NOT produce a BOM.
+
+A [=conforming parser=] SHOULD strip any BOM encountered at the start of the file. This allows parsers to interoperate with files produced by systems that add BOMs, even though conforming JSONLT generators do not produce them.
+
+A [=conforming parser=] SHALL reject byte sequences that are overlong encodings (such as encoding ASCII characters with multiple bytes), as these are not valid UTF-8 per Unicode 16.0 Section 3.9 and [[!RFC3629]]. Overlong encodings have historically been used in security attacks to bypass input validation.
+
+Note: This specification references Unicode 16.0 for UTF-8 encoding requirements. Character properties and normalization forms can be interpreted according to Unicode 16.0 or later versions that maintain backward compatibility.
+
+Media type {#media-type}
+------------------------
+
+The media type for JSONLT files is `application/vnd.jsonlt`.
+
+The file extension for JSONLT files is `.jsonlt`.
+
+Note: At the time of publication, this media type has not been registered with IANA. The `vnd.` prefix indicates a vendor-specific type per [[RFC6838]].
+
+Line structure {#line-structure}
+--------------------------------
+
+An empty file (zero bytes) is valid and represents a table with no header and no operations. A [=conforming parser=] or [=conforming generator=] SHALL signal an error when opening an empty file without a [=key specifier=].
+
+<div class="example">
+Opening an empty file:
+
+```text
+table := Table("/path/to/empty.jsonlt", "id")
+count := table.count()   (returns 0)
+table.put({"id": "first", "data": "example"})
+```
+
+The empty file requires a key specifier on open. After the put operation, the file contains one line.
+</div>
+
+Each line contains exactly one [=JSON object=] followed by a newline character (U+000A). A [=conforming generator=] SHALL produce only JSON objects, one per line. A [=conforming parser=] SHALL reject lines that contain valid JSON values other than objects. A [=conforming generator=] SHALL ensure non-empty files end with a newline character.
+
+Note: JSONLT files are a subset of JSON Lines files. Every valid JSONLT file is a valid JSON Lines file, but not every JSON Lines file is valid JSONLT. JSON Lines permits any JSON value per line (strings, numbers, arrays, objects, booleans, or null), while JSONLT requires each line to be a JSON object. This restriction supports the key-value data model where each line represents a record or tombstone. Tools that read JSON Lines will accept JSONLT files, but JSONLT parsers will reject JSON Lines files containing non-object values.
+
+A [=conforming generator=] SHALL NOT produce carriage return characters (U+000D). A [=conforming parser=] SHOULD strip CR characters preceding LF.
+
+Note: JSONLT requires LF-only line endings for output, which is stricter than JSON Lines (which permits both LF and CRLF). This ensures consistent file hashes and diffs across platforms. Files created with CRLF (for example, on Windows systems not using JSONLT generators) are technically non-conforming output, but [=conforming parsers=] can accept them by stripping CR characters.
+
+Note: [[JSONL]] is a community convention documented at https://jsonlines.org/, not a formal standards-track specification. Where JSONLT requirements differ from or extend JSON Lines conventions (such as the LF-only requirement), JSONLT requirements take precedence. This specification is self-contained and does not depend on future changes to JSON Lines documentation.
+
+A [=conforming generator=] SHALL NOT produce empty lines (lines containing no characters before the newline). A [=conforming parser=] SHOULD skip empty lines.
+
+A [=conforming parser=] SHALL signal a [=parse error=] diagnostic when encountering a line containing only whitespace. After signaling the error, a [=conforming parser=] MAY either halt processing or skip the line and continue. The [[JSONLT-TESTS]] suite expects parsers that halt to reject with `PARSE_ERROR`; parsers that continue may pass by producing the expected state.
+
+If the file does not end with a newline character and the final line is valid JSON, a [=conforming parser=] SHALL accept it. If the file does not end with a newline character and the final line is not valid JSON (truncated due to crash or partial write), a [=conforming parser=] SHOULD ignore the malformed final line and process all preceding valid lines.
+
+A [=conforming generator=] SHALL NOT produce JSON objects with duplicate keys. A [=conforming parser=] SHALL treat JSON objects containing duplicate keys as [=parse errors=].
+
+Note: This duplicate key requirement is stricter than [[!RFC8259]], which uses "SHOULD" rather than "MUST" for unique keys. JSONLT uses "SHALL" (equivalent to "MUST" per [[!RFC2119]]) and requires unique keys to ensure deterministic parsing and consistent key extraction.
+
+Deterministic serialization {#deterministic-serialization}
+----------------------------------------------------------
+
+<dfn id="dfn-deterministic-serialization">Deterministic serialization</dfn> is a JSON serialization that produces consistent output for identical logical data. A [=conforming generator=] SHALL serialize JSON objects according to the following rules:
+
+* A [=conforming generator=] SHALL sort object keys lexicographically by Unicode code point, recursively for nested objects.
+* A [=conforming generator=] SHALL NOT include whitespace except within string values.
+
+These rules ensure consistent output but do not guarantee byte-identical results across implementations due to variations in number formatting and string escaping.
+
+<p class="note"><span class="allow-2119">Number formatting for non-key numeric values (integer vs. exponential notation, trailing zeros) is not constrained by this specification. Two conforming generators may produce different representations for the same numeric value (for example, `1000000` vs. `1e6`). Applications requiring byte-identical output SHOULD normalize numeric values before storage or use [[RFC8785]].</span></p>
+
+Note: Implementations requiring byte-identical output across all implementations can conform to [[RFC8785]] (JSON Canonicalization Scheme, or JCS). JCS is informative; JSONLT does not require JCS conformance.
+
+<div class="example">
+Deterministic serialization sorts object keys by Unicode code point:
+
+Input (logical): `{"zebra": 1, "apple": 2, "Banana": 3}`
+
+Output (serialized): `{"Banana":3,"apple":2,"zebra":1}`
+
+Note that uppercase letters (U+0041-U+005A) sort before lowercase letters (U+0061-U+007A) in Unicode code point order.
+</div>
+
+String values {#string-values}
+------------------------------
+
+String values within records MAY contain any valid JSON string content, including escaped newlines (`\n`), tabs (`\t`), and other control characters. The JSON encoding ensures that literal newline characters never appear within a JSON string value, preserving the one-record-per-line property.
+
+A [=conforming generator=] SHALL use standard JSON string escaping and SHALL escape characters that [[!RFC8259]] requires to be escaped. A [=conforming generator=] SHOULD NOT escape characters that do not require escaping.
+
+A [=conforming generator=] SHALL reject records containing string values with unpaired surrogate code points (U+D800 through U+DFFF not part of a valid surrogate pair). A [=conforming parser=] encountering unpaired surrogates SHOULD accept them but MAY issue a diagnostic.
+
+Note: This requirement ensures cross-language interoperability. While JSON (via RFC 8259) technically permits unpaired surrogates, many programming languages (Rust, Go, Swift) cannot represent them in native string types. Requiring generators to reject unpaired surrogates ensures files can be read by implementations in any language.
+
+Operation encoding {#operation-encoding}
+----------------------------------------
+
+Each non-header line in a JSONLT file represents one [=operation=]. A [=conforming parser=] [=determines the operation type|determines the operation type=] by inspecting the parsed object:
+
+* If the object contains a field `$deleted` with the boolean value `true`, the line represents a [=delete=] operation ([=tombstone=]).
+* If the object contains a field `$deleted` with any other value (including `false`, null, numbers, strings, arrays, or objects), a [=conforming parser=] SHALL treat this as a [=parse error=].
+* Otherwise, the line represents an [=upsert=] operation ([=record=]).
+
+<div class="example">
+Given a table with [=key specifier=] `"id"`, the following file content:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": "alice", "role": "user"}
+{"id": "bob", "role": "admin"}
+{"id": "alice", "role": "admin"}
+{"$deleted": true, "id": "bob"}
+```
+
+The first line is a [=header=]. The subsequent lines represent this sequence of operations:
+
+1. [=upsert=] record with key "alice", value `{"id": "alice", "role": "user"}`
+2. [=upsert=] record with key "bob", value `{"id": "bob", "role": "admin"}`
+3. [=upsert=] record with key "alice", value `{"id": "alice", "role": "admin"}`
+4. [=delete=] record with key "bob"
+
+The resulting [=logical state=] contains one record:
+
+| Key | Record |
+|-----|--------|
+| `"alice"` | `{"id": "alice", "role": "admin"}` |
+
+Equivalently, calling `table.all()` returns:
+
+```json
+[{"id": "alice", "role": "admin"}]
+```
+</div>

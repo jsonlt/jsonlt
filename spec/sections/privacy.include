@@ -1,0 +1,6 @@
+Privacy considerations {#privacy}
+=================================
+
+This specification defines a data format with no inherent privacy implications. Applications using this format are responsible for handling any sensitive data they choose to encode in accordance with applicable privacy requirements.
+
+A [=conforming parser=] or [=conforming generator=] SHOULD NOT log or expose record contents in error messages or debugging output unless explicitly configured to do so.

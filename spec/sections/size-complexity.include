@@ -1,0 +1,70 @@
+Size and complexity {#size-complexity}
+======================================
+
+The <dfn>key length</dfn> of a [=key=] is the number of bytes in its JSON representation when encoded as UTF-8:
+
+* For a [=string=] key: the byte length of the JSON string including quotes and escape sequences (for example, `"alice"` is 7 bytes)
+* For an [=integer=] key: the byte length of its JSON decimal representation (for example, `12345` is 5 bytes)
+* For a [=tuple=] key: the byte length of the complete JSON array representation (for example, `["a",1]` is 7 bytes)
+
+The <dfn>record size</dfn> of a [=record=] is the number of bytes in its JSON serialization using [=deterministic serialization=], encoded as UTF-8.
+
+A [=conforming parser=] or [=conforming generator=] SHALL support at minimum:
+
+* [=key length|Key length=]: 1024 bytes
+* [=record size|Record size=]: 1,048,576 bytes (1 MiB)
+* JSON nesting depth: 64 levels
+* [=tuple|Tuple=] elements: 16 (for compound keys)
+
+Implementations MAY support larger limits and SHOULD document their actual limits. Supporting larger values does not affect conformance status.
+
+Note: These limits balance practical needs with platform feasibility. The 1024-byte key limit aligns with common database index key limits. The 1 MiB record size accommodates most practical use cases while preventing memory exhaustion. The 64-level nesting depth exceeds typical JSON usage patterns while remaining within the capabilities of most JSON parsers (some have lower defaults, such as Ruby's default of 19). The 16-element tuple limit aligns with database compound key practices (SQL Server: 16, PostgreSQL: 32).
+
+Note: The [[JSONLT-TESTS]] suite includes tests for key length and tuple element limits, which use small test data. Record size limit testing (1 MiB) requires large test files that are impractical for a declarative test suite; implementations SHOULD include record size limit tests in their own test suites.
+
+A [=conforming parser=] or [=conforming generator=] SHALL signal a [=limit error=] when a documented limit is exceeded. Implementations SHALL NOT silently truncate, corrupt, or discard data that exceeds limits.
+
+<div class="example">
+Key length calculation for a string key:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": "user_12345_account_settings_preferences", "data": "example"}
+```
+
+The key `"user_12345_account_settings_preferences"` has a [=key length=] of 41 bytes (39 characters + 2 quote bytes). The 1024-byte limit supports keys up to approximately 1022 characters (for ASCII strings without escape sequences).
+</div>
+
+<div class="example">
+Tuple key at the 16-element limit:
+
+```json
+{"$jsonlt": {"version": 1, "key": ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"]}}
+{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16,"data":"x"}
+```
+
+This 16-element tuple key is at the maximum allowed limit. A 17th element would cause a [=limit error=].
+</div>
+
+<div class="example">
+JSON nesting depth (counting levels):
+
+```json
+{"id": "x", "level1": {"level2": {"level3": {"value": 1}}}}
+```
+
+The nesting depth is 4 levels: the root object (1), `level1` object (2), `level2` object (3), and `level3` object (4). The 64-level limit allows substantial nesting while preventing stack overflow from deeply recursive structures.
+</div>
+
+The following are not normatively constrained:
+
+* Maximum file size: Limited by available storage and memory
+* Maximum records: Limited by available memory for the [=logical state=]
+
+<em>The following complexity characteristics are informative guidance for typical implementations:</em>
+
+* `get`, `has`: O(1) average with hash-based [=logical state=]
+* `put`, `delete`: O(1) for state update, O(n) for file append where n is record size
+* `all`, `keys`: O(n) where n is record count
+* `find`: O(n) where n is record count
+* `compact`: O(n log n) due to sorting

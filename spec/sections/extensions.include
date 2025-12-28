@@ -1,0 +1,8 @@
+Extension mechanism {#extensions}
+=================================
+
+Field names beginning with `$` are reserved for this specification and future extensions. A [=conforming generator=] SHALL reject records containing field names beginning with `$`.
+
+Future versions of this specification MAY define additional `$`-prefixed fields in records (beyond the currently-defined `$deleted`). For forward compatibility, a [=conforming parser=] SHOULD preserve unrecognized `$`-prefixed fields when reading files, rather than stripping them. This allows files written by newer implementations to be read (and re-written during compaction) by older implementations without data loss. If an unrecognized `$`-prefixed field conflicts with this specification's semantics (for example, an unknown field in a [=tombstone=]), a [=conforming parser=] MAY reject the file.
+
+The [=header=]'s `meta` field provides a space for application-defined metadata that does not conflict with the specification.

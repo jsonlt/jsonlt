@@ -1,0 +1,276 @@
+Algorithms {#algorithms}
+========================
+
+Algorithms in this specification use two forms of error indication:
+
+* "return an error" indicates a general implementation error to be reported to the caller.
+* "return a [=parse error=]" (or other specific error types such as [=key error=], [=limit error=], or [=conflict error=]) indicates an error that maps to a defined exception category in [[#exceptions]].
+
+Extracting a key {#algo-extract-key}
+------------------------------------
+
+<div algorithm>
+To <dfn>extract a key</dfn> from a |record| given a |key specifier|:
+
+1. If |key specifier| is a string:
+    1. Let |field| be |key specifier|.
+    1. If |record| does not have a field named |field|, return a [=key error=] indicating missing field.
+    1. Let |value| be the value of |record|[|field|].
+    1. If |value| is null, a boolean, an object, or an array, return a [=key error=] indicating invalid type.
+    1. If |value| is a number with a fractional component, return a [=key error=] indicating value is not an integer.
+    1. If |value| is a number outside the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1], return a [=key error=] indicating value out of range.
+    1. Return |value|.
+1. If |key specifier| is a [=tuple=]:
+    1. If |key specifier| contains zero field names, return a [=key error=] indicating empty key specifier.
+    1. If |key specifier| contains duplicate field names, return a [=key error=] indicating duplicate fields.
+    1. Let |result| be an empty [=list=].
+    1. For each |field| in |key specifier|:
+        1. If |record| does not have a field named |field|, return a [=key error=] indicating missing field.
+        1. Let |value| be the value of |record|[|field|].
+        1. If |value| is null, a boolean, an object, or an array, return a [=key error=] indicating invalid type.
+        1. If |value| is a number with a fractional component, return a [=key error=] indicating value is not an integer.
+        1. If |value| is a number outside the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1], return a [=key error=] indicating value out of range.
+        1. Append |value| to |result|.
+    1. If |result| contains exactly one element, return that element.
+    1. Return |result| as a [=tuple=].
+1. Otherwise, return a [=key error=] indicating invalid key specifier.
+
+Note: Step 1.4 triggers a [=key error=] when the key field value is `null`, a boolean, an object, or an array. These types are not valid as keys.
+
+</div>
+
+Determining the operation type {#algo-operation-type}
+-----------------------------------------------------
+
+<div algorithm>
+To <dfn>determine the operation type</dfn> from a parsed JSON |object|:
+
+1. If |object| contains a field named `$deleted`:
+    1. If the value of `$deleted` is the boolean `true`, return [=delete=].
+    1. Otherwise, return a [=parse error=].
+1. Otherwise, return [=upsert=].
+
+</div>
+
+Computing the logical state {#algo-logical-state}
+-------------------------------------------------
+
+<div algorithm>
+To <dfn>compute the logical state</dfn> from a |list| of operations using |key specifier|:
+
+1. Let |state| be an empty [=map=].
+1. For each |operation| in |list|, in order:
+    1. Let |key| be the result of [=extracting a key=] from |operation| using |key specifier|.
+    1. If |key| is a [=key error=], return |key|.
+    1. Let |type| be the result of [=determining the operation type|determine the operation type=] from |operation|.
+    1. If |type| is a [=parse error=], return |type|.
+    1. If |type| is [=delete=]:
+        1. Remove |key| from |state| if present.
+    1. Otherwise (|type| is [=upsert=]):
+        1. Set |state|[|key|] to |operation| (the record).
+1. Return |state|.
+
+</div>
+
+When the same key appears in multiple operations, the last operation in file order determines the key's final state. This "last write wins" semantic means that later upserts replace earlier ones, and a delete removes any prior record regardless of how many times the key was previously written.
+
+Implementations SHOULD include the line number in error messages when a [=key error=] or [=parse error=] occurs during [=computing the logical state|logical state computation=], to aid debugging.
+
+<div class="example">
+Computing logical state step by step. Given key specifier `"id"` and operations:
+
+```json
+{"id": "alice", "value": 1}
+{"id": "bob", "value": 2}
+{"id": "alice", "value": 3}
+{"$deleted": true, "id": "bob"}
+```
+
+The algorithm proceeds as follows:
+
+1. **Initial state:** `{}` (empty map)
+
+2. **Process line 1:** `{"id": "alice", "value": 1}`
+    - Extract key: `"alice"`
+    - Operation type: upsert
+    - Set state["alice"] to record
+    - **State:** `{"alice": {"id": "alice", "value": 1}}`
+
+3. **Process line 2:** `{"id": "bob", "value": 2}`
+    - Extract key: `"bob"`
+    - Operation type: upsert
+    - Set state["bob"] to record
+    - **State:** `{"alice": {...}, "bob": {"id": "bob", "value": 2}}`
+
+4. **Process line 3:** `{"id": "alice", "value": 3}`
+    - Extract key: `"alice"`
+    - Operation type: upsert
+    - Set state["alice"] to new record (replaces previous)
+    - **State:** `{"alice": {"id": "alice", "value": 3}, "bob": {...}}`
+
+5. **Process line 4:** `{"$deleted": true, "id": "bob"}`
+    - Extract key: `"bob"`
+    - Operation type: delete
+    - Remove "bob" from state
+    - **State:** `{"alice": {"id": "alice", "value": 3}}`
+
+**Final logical state:** One record with key "alice" and value 3. The record for "bob" was deleted, and "alice" was updated from value 1 to value 3.
+</div>
+
+Opening a table {#algo-open}
+----------------------------
+
+<div algorithm>
+To <dfn>open a table</dfn> at |path| with |key specifier| and <var ignore>options</var>:
+
+1. If the file at |path| exists:
+    1. Read and parse the file using the [=read a table file=] algorithm.
+    1. If the file has a [=header=] and |key specifier| was provided:
+        1. If the header's key specifier does not [=key specifier match|match=] |key specifier|, return an error.
+        1. Let |effective key specifier| be the header's key specifier.
+    1. If the file has a [=header=] and |key specifier| was not provided:
+        1. Let |effective key specifier| be the header's key specifier.
+    1. If the file has no [=header=] and |key specifier| was not provided:
+        1. Return an error indicating that a key specifier is REQUIRED when the file has no header.
+    1. If the file has no [=header=] and |key specifier| was provided:
+        1. Let |effective key specifier| be |key specifier|.
+    1. If |effective key specifier| is not a [=valid key specifier=], return an error.
+    1. [=Compute the logical state=] from the operations using |effective key specifier|.
+1. If the file does not exist:
+    1. If |key specifier| was not provided, return an error.
+    1. If |key specifier| is not a [=valid key specifier=], return an error.
+    1. Initialize with an empty [=logical state=].
+1. Return the [=table=].
+
+</div>
+
+Reading a table file {#algo-read}
+---------------------------------
+
+<div algorithm>
+To <dfn>read a table file</dfn> at |path|:
+
+1. If the file at |path| does not exist, return an empty [=list=] of operations and no header.
+1. Let |bytes| be the contents of the file at |path| as a [=byte sequence=].
+1. Let |text| be |bytes| decoded as UTF-8. If decoding fails, return an error.
+1. If |text| begins with a BOM (U+FEFF), strip the BOM.
+1. Let |endsWithNewline| be true if |text| ends with a newline character (U+000A), false otherwise.
+1. Let |lines| be |text| [=strictly split=] on newline characters (U+000A). (Note: Strictly splitting an empty string produces a list containing one empty string; this is handled by step 10.2.)
+1. Strip any trailing CR (U+000D) from each line.
+1. Let |header| be null.
+1. Let |operations| be an empty list.
+1. Let |lineNumber| be 0.
+1. For each |line| in |lines|:
+    1. Increment |lineNumber|.
+    1. If |line| is empty:
+        1. If this is the last element and |endsWithNewline| is true, continue (this is the expected trailing empty string from splitting).
+        1. Otherwise, skip this line and continue.
+    1. If |line| consists only of whitespace characters, signal a [=parse error=]. Skip this line and continue processing.
+    1. Let |object| be the result of parsing |line| as JSON. The parser SHALL enforce the implementation's maximum nesting depth; if the depth is exceeded, return a [=limit error=].
+    1. If parsing fails:
+        1. If this is the last line and |endsWithNewline| is false, ignore this line and stop processing.
+        1. Otherwise, return an error.
+    1. If |object| is not a JSON object, return an error.
+    1. If |object| contains duplicate keys, return an error.
+    1. If |object| contains the field `$jsonlt`:
+        1. If |lineNumber| is not 1, return a [=parse error=] (header can only appear on first line).
+        1. If |object|[`$jsonlt`] is not a JSON object, return a [=parse error=].
+        1. Validate the header structure (REQUIRED `version` field, optional `key`, `$schema`, `schema`, `meta` fields). If invalid, return an error.
+        1. Set |header| to the parsed header metadata.
+    1. Otherwise:
+        1. Validate that |object| is a valid [=operation=] ([=record=] or [=tombstone=]).
+        1. If validation fails (for example, `$deleted` with non-boolean value), return an error.
+        1. Append |object| to |operations|.
+1. Return |header| and |operations|.
+
+</div>
+
+Transaction operations {#algo-transaction}
+------------------------------------------
+
+<div algorithm>
+To <dfn>begin a transaction</dfn> on a [=table=]:
+
+1. If a [=transaction=] is already active on this [=table=] instance, return an error.
+1. If auto-reload is enabled, reload the file (acquiring a shared lock if the platform supports it, or briefly an exclusive lock otherwise, to ensure a consistent read).
+1. Let |snapshot| be a deep copy of the table's [=logical state=] (both the map and all record values are copied; modifications to records in |snapshot| do not affect the original state).
+1. Let |startState| be a deep copy of the table's [=logical state=] (for conflict detection at commit).
+1. Let |buffer| be an empty list.
+1. Return a transaction context with |snapshot|, |startState|, and |buffer|.
+
+Note: See [[#concurrency]] for details on the optimistic concurrency model and locking behavior.
+
+</div>
+
+<div algorithm>
+To <dfn>perform a read operation within a transaction</dfn> (used by [=get a record=], [=check for a record=], [=get all records=], [=get all keys=], [=count records=], [=find records=], and [=find one record=]):
+
+1. Use the transaction's [=snapshot=] (as modified by writes within the transaction) instead of the table's [=logical state=].
+1. Return the result based on the snapshot state.
+
+</div>
+
+<div algorithm>
+To <dfn>perform a write operation within a transaction</dfn> (used by [=put a record=] and [=delete a record=]):
+
+1. [=Extract a key=] from the record or construct the key for deletion.
+1. Validate the operation as normal (for example, check for `$`-prefixed fields in records).
+1. Append the operation to the transaction's [=buffer=].
+1. Update the transaction's [=snapshot=] to reflect the write.
+
+Note: No file lock is acquired and no file modification occurs during this algorithm. File operations are deferred to the [=commit a transaction=] algorithm.
+
+</div>
+
+<div algorithm>
+To <dfn>commit a transaction</dfn>:
+
+1. If the transaction's [=buffer=] is empty, return successfully (no file modifications needed).
+1. Let |startState| be the transaction's starting state (captured at transaction begin).
+1. Acquire the exclusive file lock.
+1. Reload the file to get the current state. If the file no longer exists, release the lock and return an [=IO error=].
+1. For each key that was written in the transaction:
+    1. If the current state for that key differs from |startState| for that key, release the lock and return a [=conflict error=]. Two states for a key differ if: (a) one contains a record for that key and the other does not, or (b) both contain records but the records are not [=logically equal=].
+1. Serialize all operations in the buffer. If serialization fails, release the lock and return an error.
+1. Append all serialized lines to the file as a single write. If the write fails, release the lock and return an error. See [[#partial-write-recovery]] for recovery semantics.
+1. Sync the file to disk. If the sync fails, release the lock and return an error. See [[#partial-write-recovery]] for recovery semantics.
+1. Update the table's [=logical state=] from the buffer.
+
+    Note: The logical state update occurs before releasing the lock to ensure the in-memory state reflects the committed file contents while the lock is still held.
+
+1. Release the lock.
+
+</div>
+
+<div algorithm>
+To <dfn>abort a transaction</dfn>:
+
+1. Discard the buffer.
+1. Discard the snapshot.
+1. No file lock is held, so none needs to be released.
+
+</div>
+
+### Partial write recovery ### {#partial-write-recovery}
+
+A partial write failure occurs when a write operation is interrupted before completion (for example, due to a process crash, power failure, or filesystem error). This can leave the file with a truncated final line.
+
+Implementations SHOULD use write-ahead techniques to minimize partial write risk. Strategies include:
+
+* Writing to a temporary file and atomically renaming it over the target file
+* Using write-ahead logging with explicit recovery procedures
+* Appending to the file only after the full write has been buffered in user space
+
+If a partial write occurs (detectable on subsequent reads by a final line that lacks a trailing newline and fails JSON parsing), a [=conforming parser=] SHOULD treat the partially-written operations as uncommitted and discard them during subsequent table opens. The recovery behavior specified in [[#line-structure]] handles this case: a [=conforming parser=] SHOULD ignore a malformed final line that lacks a trailing newline.
+
+When recovering from a truncated final line, a [=conforming parser=] SHOULD:
+
+1. Discard the partial (non-parseable) content
+2. Process all preceding valid lines normally
+3. Optionally emit a diagnostic indicating the recovery
+
+The resulting [=logical state=] reflects only operations from complete, valid lines.
+
+A commit that experiences a partial write failure leaves the transaction in an indeterminate state. The caller SHOULD NOT assume that any operations from the transaction were persisted. If the application requires confirmation of successful commit, it SHOULD re-open the table and verify the expected state.
+
+Note: Applications requiring stronger durability guarantees SHOULD consider using atomic file replacement (write to temporary file, sync, rename) for all writes, not just compaction. This approach sacrifices some append-only efficiency for stronger crash consistency.

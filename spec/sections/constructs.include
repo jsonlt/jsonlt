@@ -1,0 +1,382 @@
+Constructs {#constructs}
+========================
+
+Key {#key}
+----------
+
+A <dfn id="dfn-key">key</dfn> identifies a [=record=] within a [=table=] (see [[#table]]). A [=key=] is one of:
+
+* A [=string=]
+* An <dfn id="dfn-integer">integer</dfn> (a JSON number with no fractional component, in the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1]; this "interoperable" range from [[!RFC8259]] Section 6 corresponds to integers that [[IEEE754]] double-precision floating-point can represent exactly)
+* A <dfn id="dfn-tuple">tuple</dfn> of [=key elements=]
+
+A <dfn lt="key element|key elements">key element</dfn> is a [=string=] or [=integer=] that may appear as a component of a [=tuple=] key.
+
+A <dfn>valid key</dfn> is a [=key=] that is either a [=string=], an [=integer=] within the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1], or a non-empty [=tuple=] of [=valid key elements=]. A <dfn>valid key element</dfn> is a [=string=] or an [=integer=] within the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1].
+
+A <dfn>scalar key</dfn> is a [=key=] that is either a [=string=] or an [=integer=] (but not a [=tuple=]).
+
+A [=conforming generator=] SHALL NOT produce [=tuple=] keys with zero elements; a [=conforming parser=] SHALL reject empty arrays where a [=tuple=] key is expected. A [=tuple=] key SHALL NOT exceed 16 elements; a [=conforming parser=] or [=conforming generator=] SHALL signal a [=limit error=] when this limit is exceeded.
+
+A JSON number is considered an [=integer=] if, when converted to an IEEE 754 double-precision value, it has no fractional component and falls within the specified range. The numbers `1`, `1.0`, and `1e0` are all considered the integer 1. The number `1.5` is not an integer. The number `9007199254740992` (2<sup>53</sup>) is not a valid integer key because it exceeds the range; IEEE 754 double-precision can represent integers exactly only within the range [−(2<sup>53</sup>)+1, (2<sup>53</sup>)−1].
+
+A [=conforming parser=] SHALL reject key fields containing numbers that, when parsed as IEEE 754 double-precision, result in Infinity, -Infinity, or NaN. A [=conforming parser=] SHALL signal a [=key error=] for such values.
+
+A [=conforming parser=] SHALL normalize integer keys to their canonical numeric value before comparison. Implementations SHALL NOT distinguish between equivalent numeric representations (for example, `1`, `1.0`, `1e0` SHALL all map to the same key).
+
+A [=conforming generator=] SHALL NOT produce keys that are null, boolean, array (except as a [=tuple=] of [=valid key elements=]), or object. A [=conforming parser=] SHALL treat such values as errors when encountered where a key is expected.
+
+An empty string (`""`) is a valid [=string=] key.
+
+<div class="example">
+Table using an empty string as a key:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": "", "name": "Default record"}
+{"id": "alice", "name": "Alice"}
+```
+
+The empty string `""` and `"alice"` are distinct keys.
+</div>
+
+### Key equality ### {#key-equality}
+
+Keys are compared for equality as follows:
+
+* String keys are equal if they consist of the same sequence of Unicode code points.
+* Integer keys are equal if they have the same numeric value.
+* Tuple keys are equal if they have the same length and each corresponding element is equal. (Note: Empty tuples are not valid keys, so tuple equality always involves at least one element.)
+* Keys of different types are never equal.
+
+Unicode normalization is not performed during key comparison. A [=conforming parser=] or [=conforming generator=] MAY normalize keys to NFC before comparison and storage; if so, the implementation SHALL document this behavior and apply it consistently.
+
+<div class="example">
+Unicode normalization affects key equality. Consider this file:
+
+```json
+{"$jsonlt": {"version": 1, "key": "name"}}
+{"name": "caf\u00E9", "order": 1}
+{"name": "cafe\u0301", "order": 2}
+```
+
+The first key uses U+00E9 (precomposed é: `caf\u00E9`), while the second uses U+0065 U+0301 (e + combining acute: `cafe\u0301`). Both render as "café" but are different code point sequences. Without normalization, the table would contain two distinct records; with NFC normalization, the second would replace the first.
+</div>
+
+### Key ordering ### {#key-ordering}
+
+Keys are ordered as follows for operations that require ordering (such as compaction and iteration):
+
+* Integers are ordered numerically.
+* Strings are ordered lexicographically by Unicode code point.
+* Tuples are ordered lexicographically by element. Shorter tuples are ordered before longer tuples when all elements of the shorter tuple match the corresponding elements of the longer tuple. When comparing tuple elements of different types (for example, an integer in one tuple and a string in the other at the same position), integers are ordered before strings, consistent with top-level key ordering.
+
+When comparing keys of different types, integers are ordered before strings, and strings are ordered before tuples.
+
+When this specification refers to keys "in ascending order" or "in ascending key order," it means sorted from lowest to highest according to the ordering defined in this section.
+
+<div class="example">
+    Key ordering examples:
+
+    * Integers: `1` &lt; `2` &lt; `100` (numeric order)
+    * Strings: `"apple"` &lt; `"banana"` &lt; `"cherry"` (lexicographic by code point)
+    * Tuples: `["a", 1]` &lt; `["a", 2]` &lt; `["b", 1]` (element-by-element comparison)
+    * Cross-type: `42` &lt; `"42"` &lt; `["42"]` (integer &lt; string &lt; tuple)
+</div>
+
+Key specifier {#key-specifier}
+------------------------------
+
+A <dfn id="dfn-key-specifier">key specifier</dfn> defines how to extract a [=key=] from a [=record=]. A [=key specifier=] is one of:
+
+* A string naming a single field (for single-field keys)
+* A [=tuple=] of strings naming multiple fields (for compound keys)
+
+A <dfn>valid key specifier</dfn> is a [=key specifier=] that is either a [=string=], or a [=tuple=] containing at least one field name with no duplicate field names.
+
+Two [=key specifiers=] <dfn lt="key specifier match|key specifiers match">match</dfn> if, after normalizing single-element tuples to strings, they are structurally identical and each field name consists of the same sequence of Unicode code points. For example, `"id"` and `["id"]` match because `["id"]` normalizes to `"id"`, while `["org", "id"]` matches only `["org", "id"]` (or the equivalent single-element-normalized form, which in this case is unchanged).
+
+A [=conforming generator=] SHALL NOT produce [=key specifier=] tuples with zero field names; a [=conforming parser=] SHALL reject empty arrays where a [=key specifier=] is expected.
+
+A [=conforming generator=] SHALL NOT produce [=key specifier=] tuples with duplicate field names; a [=conforming parser=] SHALL reject such tuples.
+
+Given a [=key specifier=], the [=extract a key=] algorithm extracts the corresponding [=key=] from a [=record=].
+
+Note: A single-element [=tuple=] key specifier (for example, `["id"]`) produces [=scalar keys=], not tuple keys. This normalization ensures that `"id"` and `["id"]` are interchangeable key specifiers—both extract the same [=scalar key=] from a record. Tuple keys are only produced when the key specifier contains two or more field names.
+
+<div class="example">
+Single-element tuple key specifier normalization. These two headers are equivalent:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"$jsonlt": {"version": 1, "key": ["id"]}}
+```
+
+Both extract the scalar key `"alice"` (not the tuple `["alice"]`) from the following record:
+
+```json
+{"id": "alice", "name": "Alice"}
+```
+
+In contrast, a two-element key specifier produces tuple keys:
+```json
+{"$jsonlt": {"version": 1, "key": ["org", "id"]}}
+{"org": "acme", "id": "alice", "name": "Alice"}
+```
+
+Here the key is the tuple `["acme", "alice"]`.
+</div>
+
+A <dfn lt="key field|key fields">key field</dfn> is a field whose name is specified by the table's [=key specifier=].
+
+Note: Field names in a [=key specifier=] can contain any characters valid in JSON property names, including spaces, newlines, and other special characters. For example, `{"key": "field with spaces"}` is a valid header with a key specifier containing a space.
+
+Record {#record}
+----------------
+
+A <dfn id="dfn-record">record</dfn> is a [=JSON object=] that contains at minimum the fields REQUIRED by the table's [=key specifier=], with values that are [=valid keys=] or [=valid key elements=]. A record containing only the key fields (with no additional data fields) is valid.
+
+Field names beginning with `$` are reserved for use by this specification and future extensions. A [=conforming generator=] SHALL NOT produce [=records=] containing fields whose names begin with `$`. A [=conforming parser=] encountering a record with unrecognized `$`-prefixed fields SHOULD preserve them for forward compatibility with future specification versions.
+
+Tombstone {#tombstone}
+----------------------
+
+A <dfn id="dfn-tombstone">tombstone</dfn> is a [=JSON object=] that marks the deletion of a [=record=]. A [=tombstone=] contains:
+
+* The fields REQUIRED by the table's [=key specifier=], with values identifying the deleted record
+* A field named `$deleted` with the value `true` (the JSON boolean, not a string or other truthy value)
+
+A [=tombstone=] contains only the [=key fields=] and `$deleted`. A [=conforming generator=] SHALL NOT produce tombstones with additional fields.
+
+When reading a file, if an object contains `$deleted` with a value other than the boolean `true`, a [=conforming parser=] SHALL treat this as a [=parse error=]. If an object contains `$deleted: true` along with fields other than the [=key fields=], a [=conforming parser=] SHOULD treat it as a valid tombstone (ignoring extra fields).
+
+<div class="example">
+Tombstone with extra fields (accepted when recovering from non-conforming input):
+
+```json
+{"$deleted": true, "id": "alice", "reason": "user requested deletion"}
+```
+
+A [=conforming parser=] SHOULD accept this tombstone, treating `"reason"` as extraneous and ignoring it. A [=conforming generator=] SHALL NOT produce tombstones with extra fields.
+</div>
+
+Operation {#operation}
+----------------------
+
+An <dfn id="dfn-operation">operation</dfn> is a transformation that modifies the [=logical state=] of a [=table=]. There are two kinds of operations:
+
+An <dfn>upsert operation</dfn> (or simply <dfn lt="upsert">upsert</dfn>) inserts a new record or replaces an existing record with the same key. It is represented by a [=record=].
+
+A <dfn>delete operation</dfn> (or simply <dfn lt="delete">delete</dfn>) removes a record from the logical state. It is represented by a [=tombstone=].
+
+When [=computing the logical state|replayed=] in sequence, operations determine the current contents of the table.
+
+The [=determine the operation type=] algorithm inspects a parsed JSON object to determine whether it represents an [=upsert operation=] or [=delete operation=].
+
+Header {#header}
+----------------
+
+A <dfn id="dfn-header">header</dfn> is an optional first line in a JSONLT file that provides metadata about the file. A [=header=] is a [=JSON object=] containing a single field `$jsonlt` whose value is an object with the following fields:
+
+<dl>
+    <dt>`version` (REQUIRED)</dt>
+    <dd>An integer specifying the JSONLT specification version. For this specification, the value SHALL be `1`. A [=conforming parser=] SHALL reject the file with a [=parse error=] indicating an unsupported version if the version field contains a value other than `1`.</dd>
+
+    <dt>`key` (optional)</dt>
+    <dd>The [=key specifier=] for the table, as a string or array of strings.</dd>
+
+    <dt>`$schema` (optional)</dt>
+    <dd>A string containing a URL reference to a [[JSON-SCHEMA]] that validates records in this table.</dd>
+
+    <dt>`schema` (optional)</dt>
+    <dd>A [[JSON-SCHEMA]] object that validates records in this table. Mutually exclusive with `$schema`; if both are present, a [=conforming parser=] SHALL treat this as a [=parse error=].</dd>
+
+    <dt>`meta` (optional)</dt>
+    <dd>An arbitrary JSON object containing user-defined metadata.</dd>
+</dl>
+
+A [=conforming parser=] SHOULD preserve unknown fields in the `$jsonlt` object for forward compatibility.
+
+<div class="example">
+Minimal header (version only):
+
+```json
+{"$jsonlt": {"version": 1}}
+```
+</div>
+
+<div class="example">
+Header with key specifier:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+```
+</div>
+
+<div class="example">
+Header with external schema:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id", "$schema": "https://example.com/users.schema.json"}}
+```
+</div>
+
+<div class="example">
+Header with inline schema and compound key:
+
+```json
+{"$jsonlt": {"version": 1, "key": ["org", "id"], "schema": {"type": "object", "properties": {"org": {"type": "string"}, "id": {"type": "integer"}, "name": {"type": "string"}}}, "meta": {"created": "2025-01-15"}}}
+```
+
+Note: Because each line in a JSONLT file is a complete JSON object, inline schemas are serialized on a single line. For large schemas, consider using `$schema` to reference an external schema document instead.
+</div>
+
+<div class="example">
+Table with integer keys (numeric identifiers):
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": 1001, "name": "Widget", "price": 9.99}
+{"id": 1002, "name": "Gadget", "price": 19.99}
+{"id": 1003, "name": "Sprocket", "price": 4.99}
+```
+
+The keys are the integers 1001, 1002, and 1003.
+</div>
+
+<div class="example">
+Table with compound (tuple) keys:
+
+```json
+{"$jsonlt": {"version": 1, "key": ["org", "id"]}}
+{"org": "acme", "id": 1, "name": "Alice", "role": "admin"}
+{"org": "acme", "id": 2, "name": "Bob", "role": "user"}
+{"org": "globex", "id": 1, "name": "Carol", "role": "admin"}
+{"$deleted": true, "org": "acme", "id": 2}
+```
+
+The keys are the tuples ["acme", 1], ["acme", 2], and ["globex", 1]. After the delete operation, only ["acme", 1] and ["globex", 1] remain. Note that ["acme", 1] and ["globex", 1] are distinct keys because their first elements differ.
+</div>
+
+<div class="example">
+Table with a three-element compound key:
+
+```json
+{"$jsonlt": {"version": 1, "key": ["region", "org", "id"]}}
+{"region": "us-east", "org": "acme", "id": 1, "name": "Alice"}
+{"region": "us-east", "org": "acme", "id": 2, "name": "Bob"}
+{"region": "eu-west", "org": "acme", "id": 1, "name": "Carol"}
+```
+
+The keys are the tuples ["us-east", "acme", 1], ["us-east", "acme", 2], and ["eu-west", "acme", 1]. All three are distinct because they differ in at least one element position.
+</div>
+
+<div class="example">
+Table with integer keys at boundary values:
+
+```json
+{"$jsonlt": {"version": 1, "key": "id"}}
+{"id": 9007199254740991, "name": "Maximum valid integer key"}
+{"id": -9007199254740991, "name": "Minimum valid integer key"}
+{"id": 0, "name": "Zero is valid"}
+{"id": -1, "name": "Negative integers are valid"}
+```
+
+The values 9007199254740991 ((2<sup>53</sup>)−1) and -9007199254740991 (−(2<sup>53</sup>)+1) are the maximum and minimum valid integer keys. The value 9007199254740992 (2<sup>53</sup>) would NOT be a valid integer key because it exceeds the interoperable integer range.
+</div>
+
+If a file's first line is a valid JSON object containing the field `$jsonlt`, a [=conforming parser=] SHALL interpret that line as a [=header=], not as an [=operation=]. If the first line is any other valid JSON object, the file has no header.
+
+A file containing only a [=header=] (no operations) is valid and represents a table with no records.
+
+When opening a table, if both the header and the caller provide a [=key specifier=], they SHALL [=key specifier match|match=]. If they do not [=key specifier match|match=], a [=conforming parser=] or [=conforming generator=] SHALL treat this as an error.
+
+Files without headers are valid; a [=conforming parser=] SHALL treat them as version 1.
+
+Logical state {#logical-state}
+------------------------------
+
+The <dfn id="dfn-logical-state">logical state</dfn> of a table is a [=map=] from keys to records, representing the current contents of the table after all operations have been applied.
+
+Note: In this specification, "[=record=]" refers to the [=JSON object=] stored in the file, while the [=logical state=] is a map containing key-record pairs (entries). When this specification refers to "records in the logical state," it means the record values stored in that map.
+
+The [=compute the logical state=] algorithm replays a list of operations to produce the logical state.
+
+Table {#table}
+--------------
+
+A <dfn id="dfn-table">table</dfn> is the central construct in JSONLT. A [=table=] has:
+
+* A file path identifying the underlying storage
+* A [=key specifier=] defining how records are keyed
+* A [=logical state=] computed from the file contents
+
+Note: In this specification, "file" refers to the physical storage (the JSONLT file on disk), while "table" refers to the logical construct that includes the parsed content and computed state. A table is backed by a file; operations on a table modify its underlying file.
+
+A [=table=] provides operations to read, write, and query records. All write operations append to the underlying file; the file is never modified in place during normal operation. Only compaction replaces the file.
+
+Transaction {#transaction}
+--------------------------
+
+A <dfn id="dfn-snapshot">snapshot</dfn> is a copy of a [=table=]'s [=logical state=] at a specific point in time. Within a [=transaction=] (defined below), the snapshot includes any modifications made within that transaction.
+
+A <dfn id="dfn-buffer">buffer</dfn> is a [=list=] of pending [=operations=] that have not yet been written to the underlying file.
+
+A <dfn id="dfn-transaction">transaction</dfn> is a context for performing multiple operations atomically. A [=transaction=] has:
+
+* An associated [=table=]
+* A [=snapshot=] of the table's [=logical state=] at transaction start, plus any modifications made within the transaction
+* A [=buffer=] of pending operations to be written when the transaction commits
+
+While a [=transaction=] is active:
+
+* Read operations return data from the transaction's [=snapshot=]
+* Write operations modify the transaction's [=snapshot=] and append to the [=buffer=]
+* The underlying file is not modified
+
+When a [=transaction=] commits:
+
+1. Acquire the exclusive file lock.
+1. Reload the file if it has been modified since the transaction started.
+1. For each key written by the transaction, if that key has been modified in the reloaded state compared to the transaction's starting state, the commit SHALL fail with a [=conflict error=].
+1. If no conflicts, append all buffered operations to the file as a single write operation.
+1. Release the lock.
+
+When a [=transaction=] aborts:
+
+* The [=buffer=] is discarded
+* The table's [=logical state=] is unchanged
+
+A [=conforming parser=] or [=conforming generator=] implementing transactions SHALL NOT permit nested transactions. Attempting to start a transaction while one is already active SHALL result in an error.
+
+Transaction support is an optional feature. An implementation supporting [=transactions=] SHALL conform to both [=conforming parser=] and [=conforming generator=] requirements; it is not a separate third conformance profile. An implementation that conforms to only one profile MAY omit transaction operations.
+
+JSONLT uses an optimistic concurrency model: transactions do not hold locks during execution, only at commit time. Conflict detection is based on write-write conflicts only—if two transactions write to the same key, the second to commit fails. Read-write conflicts (where a transaction reads a value that another transaction subsequently modifies) are not detected. Applications requiring stronger isolation guarantees SHOULD implement additional coordination at the application level.
+
+<div class="example">
+Transaction workflow—successful commit:
+
+```text
+tx := table.transaction()          (capture snapshot)
+record := tx.get("alice")          (read from snapshot)
+record.balance := record.balance + 100
+tx.put(record)                     (buffer the write)
+tx.commit()                        (acquire lock, check conflicts, write)
+```
+
+Transaction workflow—conflict scenario:
+
+```text
+Process A                          Process B
+─────────────────────────────────  ─────────────────────────────────
+txA := table.transaction()         txB := table.transaction()
+recA := txA.get("alice")           recB := txB.get("alice")
+recA.balance := recA.balance + 50  recB.balance := recB.balance + 25
+txA.put(recA)                      txB.put(recB)
+txA.commit() → succeeds
+                                   txB.commit() → conflict error
+                                   (Process B needs to retry with new transaction)
+```
+
+In the conflict scenario, both transactions read the same starting state and modify the same key. When Process A commits first, it succeeds. When Process B attempts to commit, conflict detection finds that "alice" was modified since B's transaction started, causing a [=conflict error=].
+</div>

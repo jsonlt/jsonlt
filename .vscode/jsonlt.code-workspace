@@ -37,5 +37,9 @@
 			"path": "../../vale-jsonlt"
 		}
   ],
-  "settings": {}
+  "settings": {
+    "files.associations": {
+      "*.include": "bikeshed"
+    }
+  }
 }

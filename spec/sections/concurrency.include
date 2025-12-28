@@ -1,0 +1,37 @@
+Concurrency {#concurrency}
+==========================
+
+File locking {#file-locking}
+----------------------------
+
+When multiple processes access the same table file, a [=conforming generator=] SHALL ensure that concurrent write operations do not corrupt the file or produce malformed output. A [=conforming generator=] SHALL ensure that each write operation produces a complete, valid line followed by a newline character, even when other processes are simultaneously reading or writing the same file.
+
+To achieve this, implementations SHOULD use advisory file locking to coordinate access. The specific mechanism is implementation-defined (for example, fcntl, flock, or platform-specific APIs). Write operations SHOULD acquire an exclusive lock before modifying the file and hold it until the write completes and the file is synced. Read operations that may trigger a reload SHOULD acquire a shared lock if the platform supports them, or briefly acquire an exclusive lock, to avoid reading a partially-written line.
+
+Note: The testable outcome is file integrity under concurrent access. The specific locking mechanism is implementation guidance; implementations MAY use alternative coordination mechanisms that achieve the same outcome.
+
+Transactions use optimistic concurrency: no lock is held during the transaction, but the exclusive lock is acquired at commit time to perform conflict detection and write the buffered operations atomically.
+
+Auto-reload behavior {#auto-reload}
+-----------------------------------
+
+When auto-reload is enabled, a [=conforming parser=] or [=conforming generator=] SHALL check the file's modification time (mtime) before read operations return data. If the mtime has changed since the last load, the implementation SHALL reload the file from disk before answering the read.
+
+Inside a [=transaction=], auto-reload occurs only at transaction start. Subsequent reads within the transaction see the snapshot state.
+
+Note: The mtime check adds one stat system call per read operation.
+
+Note: Some filesystems have coarse mtime resolution (for example, HFS+ has 1-second granularity). Implementations SHOULD additionally compare file size to detect changes that occur within the same mtime window. Applications requiring stronger consistency guarantees SHOULD use explicit reload calls or transactions rather than relying on auto-reload.
+
+Implementation testing guidance {#impl-testing-guidance}
+---------------------------------------------------------
+
+<em>This section is non-normative.</em>
+
+Several normative requirements in this specification are difficult or impossible to test in a declarative, language-agnostic conformance suite:
+
+* **Concurrent write integrity** ([[#file-locking]]): Requires multi-process coordination
+* **Auto-reload behavior** ([[#auto-reload]]): Requires external file modification during test execution
+* **Atomic rename fallback** ([[#algo-compact]]): Platform-specific filesystem behavior
+
+The [[JSONLT-TESTS]] suite focuses on format parsing and state computation—behaviors that can be verified with deterministic inputs and outputs. Implementations SHOULD include tests for these platform-specific behaviors in their own test suites, potentially using multi-process test harnesses or platform-specific mocking frameworks.

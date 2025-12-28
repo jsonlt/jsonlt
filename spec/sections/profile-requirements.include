@@ -1,0 +1,71 @@
+Profile requirement summary {#appendix-profile-requirements}
+=============================================================
+
+<em>This section is non-normative.</em>
+
+This appendix provides a summary of normative requirements by conformance profile for quick reference. Requirements are identified by the section containing them. This summary restates requirements defined normatively in the referenced sections; in case of any discrepancy, the normative sections govern.
+
+Parser requirements {#profile-parser}
+-------------------------------------
+
+A [=conforming parser=] SHALL:
+
+* Treat invalid key values as errors ([[#key]])
+* Treat invalid `$deleted` values as [=parse errors=] ([[#tombstone]])
+* Reject files with unsupported version numbers ([[#header]])
+* Treat duplicate `$schema` and `schema` as [=parse errors=] ([[#header]])
+* Treat files without headers as version 1 ([[#header]])
+* Treat whitespace-only lines as [=parse errors=] ([[#line-structure]])
+* Treat duplicate JSON keys as [=parse errors=] ([[#line-structure]])
+
+A [=conforming parser=] SHOULD:
+
+* Preserve unrecognized `$`-prefixed fields for forward compatibility ([[#conformance-parser]])
+* Preserve unknown header fields for forward compatibility ([[#header]])
+* Strip BOMs encountered ([[#encoding]])
+* Strip CR characters preceding LF ([[#line-structure]])
+* Skip empty lines ([[#line-structure]])
+* Accept files not ending with newline if final line is valid JSON ([[#line-structure]])
+* Treat tombstones with extra fields as valid ([[#tombstone]])
+* Use advisory file locking for concurrent access ([[#file-locking]])
+
+Generator requirements {#profile-generator}
+-------------------------------------------
+
+A [=conforming generator=] SHALL:
+
+* Produce output conforming to [[#physical-format]] ([[#conformance-generator]])
+* Use [=deterministic serialization=] ([[#conformance-generator]])
+* Reject records with `$`-prefixed fields ([[#conformance-generator]])
+* Not produce a BOM ([[#encoding]])
+* Ensure files end with newline ([[#line-structure]])
+* Not produce CR characters ([[#line-structure]])
+* Not produce empty lines ([[#line-structure]])
+* Not produce duplicate JSON keys ([[#line-structure]])
+* Sort object keys lexicographically ([[#deterministic-serialization]])
+* Use standard JSON string escaping ([[#string-values]])
+* Encode files as UTF-8 ([[#i18n]])
+* Use atomic file replacement or report error ([[#algo-compact]])
+* Reject records containing unpaired surrogate code points ([[#string-values]])
+
+A [=conforming generator=] SHOULD:
+
+* Not escape characters that do not require escaping ([[#string-values]])
+* Use advisory file locking for concurrent access ([[#file-locking]])
+
+Both profiles {#profile-both}
+-----------------------------
+
+Both [=conforming parser=] and [=conforming generator=] SHALL:
+
+* Treat key specifier mismatches as errors ([[#header]])
+* Signal errors as defined in [[#exceptions]]
+* Support minimum key length of 1024 bytes ([[#size-complexity]])
+* Support minimum record size of 1 MiB ([[#size-complexity]])
+* Support minimum JSON nesting depth of 64 levels ([[#size-complexity]])
+* Support minimum tuple key element count of 16 ([[#size-complexity]])
+* Signal [=limit errors=] when limits are exceeded ([[#size-complexity]])
+
+Both profiles MAY:
+
+* Normalize keys to NFC (if documented and applied consistently) ([[#key-equality]])

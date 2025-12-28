@@ -1,0 +1,122 @@
+API {#api}
+==========
+
+This section defines the abstract interface that a [=conforming parser=] or [=conforming generator=] SHALL provide (for operations applicable to each profile). The notation follows the conventions defined in [[#notation]].
+
+Table constructor {#api-table}
+------------------------------------
+
+```
+table := Table(path, key?, options?)
+```
+
+Creates or opens a [=table=] backed by the file at |path|. The |path| parameter is a String. The |key| parameter is the [=key specifier=]; if the file has a [=header=] with a key specifier, the provided |key| SHALL match or be omitted. The |options| parameter is a TableOptions object; if |options| is not provided, default values are used. A [=conforming parser=] or [=conforming generator=] SHALL execute the [=open a table=] algorithm. If the file exists, its contents are loaded. If the file does not exist, it will be created on first write.
+
+TableOptions {#api-options}
+---------------------------------
+
+<dl>
+    <dt>`autoReload`</dt>
+    <dd>Boolean, default true. If true, check for external file modifications before read operations by comparing the file's modification time (mtime) to the last known value.</dd>
+
+    <dt>`lockTimeout`</dt>
+    <dd>Integer (milliseconds), optional. Maximum time to wait when acquiring file locks.</dd>
+</dl>
+
+Note: Option names use camelCase to match common JSON naming conventions. Prose in this specification uses hyphenated forms (for example, "auto-reload") when referring to the behavior.
+
+Read operations {#api-read}
+---------------------------------
+
+```
+record := table.get(key)
+```
+
+Executes the [=get a record=] algorithm. The |key| parameter is a [=key=]. Returns the [=record=] for |key|, or null if no such record exists.
+
+```
+exists := table.has(key)
+```
+
+Executes the [=check for a record=] algorithm. The |key| parameter is a [=key=]. Returns true if a [=record=] for |key| exists, false otherwise.
+
+```
+records := table.all()
+```
+
+Executes the [=get all records=] algorithm. Returns a List&lt;Record&gt; of all records in the [=table=], in ascending key order.
+
+```
+keys := table.keys()
+```
+
+Executes the [=get all keys=] algorithm. Returns a List&lt;Key&gt; of all keys in the [=table=], in ascending key order.
+
+```
+count := table.count()
+```
+
+Executes the [=count records=] algorithm. Returns the number of records in the [=table=] as an Integer.
+
+```
+records := table.find(predicate)
+```
+
+Executes the [=find records=] algorithm. The |predicate| parameter is a function that takes a Record and returns a Boolean. Returns a List&lt;Record&gt; of all records for which |predicate| returns true, in ascending key order.
+
+```
+record := table.findOne(predicate)
+```
+
+Executes the [=find one record=] algorithm. The |predicate| parameter is a function that takes a Record and returns a Boolean. Returns the first record (by ascending key order) for which |predicate| returns true, or null if none match.
+
+Write operations {#api-write}
+-----------------------------------
+
+```
+table.put(record)
+```
+
+Executes the [=put a record=] algorithm. The |record| parameter is a [=record=]. Inserts or updates |record| in the table. The [=key=] is extracted from |record| using the table's [=key specifier=].
+
+```
+deleted := table.delete(key)
+```
+
+Executes the [=delete a record=] algorithm. The |key| parameter is a [=key=]. Deletes the [=record=] for |key|. Returns true if the record existed, false otherwise.
+
+```
+table.clear()
+```
+
+Executes the [=clear all records=] algorithm. Deletes all records from the [=table=] by compacting to an empty state.
+
+Transaction operations {#api-transaction}
+------------------------------------------------
+
+```
+tx := table.transaction()
+```
+
+Executes the [=begin a transaction=] algorithm and returns a transaction context. The transaction provides snapshot isolation: read operations within the transaction [=perform a read operation within a transaction|use the transaction's snapshot=], and write operations [=perform a write operation within a transaction|buffer changes=] until the transaction is committed or aborted.
+
+```
+tx.commit()
+```
+
+Executes the [=commit a transaction=] algorithm. Writes all buffered operations to the file atomically.
+
+```
+tx.abort()
+```
+
+Executes the [=abort a transaction=] algorithm. Discards all buffered operations without modifying the file.
+
+Maintenance operations {#api-maintenance}
+-----------------------------------------------
+
+```
+table.compact()
+```
+
+Executes the [=compact a table=] algorithm. Rewrites the file as a minimal snapshot, sorted by key.

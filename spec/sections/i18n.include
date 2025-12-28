@@ -1,0 +1,8 @@
+Internationalization considerations {#i18n}
+===========================================
+
+A [=conforming generator=] SHALL encode JSONLT files as UTF-8, supporting the full Unicode character set.
+
+Key comparison is based on Unicode code points without normalization. Applications requiring normalization-insensitive key matching SHOULD normalize keys to NFC before storage.
+
+String values may contain any valid Unicode content, escaped according to [[!RFC8259]] string escaping rules.

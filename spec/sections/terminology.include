@@ -1,0 +1,59 @@
+Terminology {#terminology}
+==========================
+
+This specification uses terminology from the Infra Standard [[!INFRA]] where applicable, including [=string=], [=byte sequence=], [=list=], and [=map=].
+
+Note: The Infra Standard defines "string" as a sequence of code points, which can include surrogate code points. JSONLT uses this definition, but [[#string-values]] recommends against unpaired surrogates for interoperability. Implementations can use Infra's "scalar value string" (which excludes surrogates) if they reject strings with unpaired surrogates.
+
+A <dfn>JSON object</dfn> is an unordered collection of property names (strings) and JSON values, as defined in [[!RFC8259]]. (This definition restates RFC 8259 for convenience of reference within this specification.)
+
+Two JSON values are <dfn lt="logically equal|logical equality">logically equal</dfn> if any of the following conditions holds:
+
+* Both are `null`.
+* Both are booleans with the same value.
+* Both are numbers that are numerically equal (per IEEE 754 comparison, where `−0` equals `+0`).
+* Both are strings consisting of the same sequence of Unicode code points.
+* Both are arrays with the same length where corresponding elements are [=logically equal=].
+* Both are objects with the same set of property names where corresponding property values are [=logically equal=].
+
+The <dfn>nesting depth</dfn> of a JSON value is the maximum number of nested JSON objects and arrays at any point within that value, where the outermost value is at depth 1. A primitive value (null, boolean, number, or string) has nesting depth 1. An empty object or array has nesting depth 1. An object or array containing only primitive values has nesting depth 2.
+
+Notation {#notation}
+--------------------
+
+This specification uses a language-agnostic notation to describe abstract interfaces. The notation conventions are inspired by [[RFC9622]].
+
+**Object creation** is written as:
+
+```
+object := Constructor(param, optionalParam?)
+```
+
+This creates an object by invoking a constructor with the given parameters. Parameters marked with `?` are optional.
+
+**Method invocation** is written as:
+
+```
+result := object.method(param)
+```
+
+This invokes a method on an object and assigns the return value. When a method returns no meaningful value, the assignment is omitted:
+
+```
+object.action()
+```
+
+The **basic types** used in this specification are:
+
+* **Boolean**: `true` or `false`
+* **Integer**: a whole number within the range −(2<sup>53</sup>)+1 to (2<sup>53</sup>)−1
+* **String**: a sequence of Unicode code points
+* **Key**: a [=key=] as defined in [[#key]]
+* **Record**: a [=record=] as defined in [[#record]]
+
+The **compound types** are:
+
+* **List&lt;T&gt;**: an ordered sequence of values of type T
+* **T | Null**: a value of type T, or null indicating absence
+
+Implementations SHOULD map these abstract types to idiomatic constructs in their target language. See [[#appendix-implementation]] for guidance.

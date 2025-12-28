@@ -1,0 +1,27 @@
+Introduction {#intro}
+=====================
+
+<em>This section is non-normative.</em>
+
+A JSONLT file contains a sequence of operations—insertions and deletions—rather than a snapshot of current state. The [=logical state=] of the table (the current set of records after all operations have been applied; see [[#logical-state]]) is computed by replaying these operations in order. This append-only design ensures that modifications produce minimal diffs when the file is tracked in version control.
+
+Purpose {#purpose}
+------------------
+
+JSONLT provides a lightweight, portable format for storing keyed records that:
+
+* Is human-readable and editable with standard text tools
+* Produces clean diffs in version control systems
+* Supports concurrent access through file locking
+* Requires no external database or service
+
+Scope {#scope}
+--------------
+
+This specification defines:
+
+* The physical file format (encoding, line structure, JSON representation)
+* The logical data model (keys, records, operations, state)
+* Processing algorithms (parsing, serialization, compaction)
+* An abstract interface for implementations
+* Concurrency and transaction semantics

@@ -1,0 +1,15 @@
+Security considerations {#security}
+===================================
+
+JSONLT files are plain text and offer no encryption or access control beyond filesystem permissions. Applications storing sensitive data SHOULD implement encryption, access controls, or other protections at the application or filesystem level.
+
+Note: The following guidance helps protect against resource exhaustion when processing untrusted input:
+
+* Limit maximum line length (for example, to the implementation's documented record size limit from [[#size-complexity]]) to prevent memory exhaustion from maliciously large records.
+* Limit nesting depth when parsing JSON (for example, to the documented maximum depth) to prevent stack overflow.
+* Impose limits on total file size and record count.
+* Rate-limit or size-limit append operations in multi-user environments.
+
+Path traversal: A [=conforming parser=] or [=conforming generator=] SHOULD sanitize or validate file paths to prevent directory traversal attacks.
+
+Symbolic links: When the table path is a symbolic link, a [=conforming generator=] performing compaction SHOULD either follow the link (writing the compacted file to the link target) or reject the operation with an error. Compaction SHOULD NOT replace a symbolic link with a regular file. Implementations SHOULD document their symbolic link handling.
