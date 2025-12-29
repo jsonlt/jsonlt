@@ -1,7 +1,7 @@
 {
 	"packageManager": "pnpm@10.19.0",
 	"devDependencies": {
-		"vnu-jar": "25.12.26",
+		"vnu-jar": "25.12.28",
 		"wrangler": "^4.0.0"
 	}
 }
