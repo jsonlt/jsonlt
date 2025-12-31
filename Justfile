@@ -14,6 +14,7 @@ conformance_build_dir := "build/latest/tests"
 
 # Build all specifications
 build: build-spec build-conformance-spec build-conformance-suite
+  cp _redirects {{build_dir}}/
 
 # Build the specification
 build-spec: clean-spec

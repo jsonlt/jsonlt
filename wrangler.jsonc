@@ -11,7 +11,7 @@
   },
 
   // Production deployment to spec.jsonlt.org
-  // NOTE: Configure a redirect from / to /latest/ in Cloudflare dashboard or use _redirects file
+  // NOTE: Root redirect to /latest/ configured via _redirects file
   "routes": [
     { "pattern": "spec.jsonlt.org", "custom_domain": true }
   ],
