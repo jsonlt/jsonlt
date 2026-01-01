@@ -58,3 +58,5 @@ optionalFeatures
 suiteVersion
 url
 Yergeau
+[cC]onformant
+Postel's

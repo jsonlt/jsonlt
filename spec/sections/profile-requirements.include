@@ -16,10 +16,11 @@ A [=conforming parser=] SHALL:
 * Treat duplicate `$schema` and `schema` as [=parse errors=] ([[#header]])
 * Treat files without headers as version 1 ([[#header]])
 * Treat whitespace-only lines as [=parse errors=] ([[#line-structure]])
-* Treat duplicate JSON keys as [=parse errors=] ([[#line-structure]])
+* Use last-value-wins semantics when duplicate JSON keys are not detected ([[#line-structure]])
 
 A [=conforming parser=] SHOULD:
 
+* Treat duplicate JSON keys as [=parse errors=] ([[#line-structure]])
 * Preserve unrecognized `$`-prefixed fields for forward compatibility ([[#conformance-parser]])
 * Preserve unknown header fields for forward compatibility ([[#header]])
 * Strip BOMs encountered ([[#encoding]])

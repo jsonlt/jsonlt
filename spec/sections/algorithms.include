@@ -171,7 +171,7 @@ To <dfn>read a table file</dfn> at |path|:
         1. If this is the last line and |endsWithNewline| is false, ignore this line and stop processing.
         1. Otherwise, return an error.
     1. If |object| is not a JSON object, return an error.
-    1. If |object| contains duplicate keys, return an error.
+    1. If the implementation detects that |object| contains duplicate keys, return a [=parse error=]. If duplicate keys were not detected during parsing, the parsed |object| reflects last-value-wins semantics.
     1. If |object| contains the field `$jsonlt`:
         1. If |lineNumber| is not 1, return a [=parse error=] (header can only appear on first line).
         1. If |object|[`$jsonlt`] is not a JSON object, return a [=parse error=].

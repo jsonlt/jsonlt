@@ -56,9 +56,9 @@ A [=conforming parser=] SHALL signal a [=parse error=] diagnostic when encounter
 
 If the file does not end with a newline character and the final line is valid JSON, a [=conforming parser=] SHALL accept it. If the file does not end with a newline character and the final line is not valid JSON (truncated due to crash or partial write), a [=conforming parser=] SHOULD ignore the malformed final line and process all preceding valid lines.
 
-A [=conforming generator=] SHALL NOT produce JSON objects with duplicate keys. A [=conforming parser=] SHALL treat JSON objects containing duplicate keys as [=parse errors=].
+A [=conforming generator=] SHALL NOT produce JSON objects with duplicate keys. A [=conforming parser=] SHOULD treat JSON objects containing duplicate keys as [=parse errors=]. A [=conforming parser=] that does not detect duplicate keys SHALL use the value from the last occurrence of each key and SHOULD document this limitation.
 
-Note: This duplicate key requirement is stricter than [[!RFC8259]], which uses "SHOULD" rather than "MUST" for unique keys. JSONLT uses "SHALL" (equivalent to "MUST" per [[!RFC2119]]) and requires unique keys to ensure deterministic parsing and consistent key extraction.
+Note: The generator requirement is stricter than [[!RFC8259]], which uses "SHOULD" for unique keys. The parser requirement uses "SHOULD" to accommodate JSON libraries that cannot detect duplicates; parsers unable to detect duplicates use last-value-wins semantics matching [[RFC8259]] Section 4's interoperability guidance. This approach aligns with [[RFC7493]] (I-JSON) for generators while enabling broader parser implementation.
 
 Deterministic serialization {#deterministic-serialization}
 ----------------------------------------------------------

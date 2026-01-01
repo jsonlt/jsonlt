@@ -110,6 +110,75 @@
         "1": {"id": 1, "name": "test"},
         "2": {"id": 2, "name": "test2"}
       }
+    },
+    // Duplicate key detection is SHOULD-level. These tests verify parsers that don't
+    // detect duplicates use last-value-wins semantics per spec. Parsers that detect
+    // duplicates will reject with PARSE_ERROR, which is also valid.
+    {
+      "id": "recovery-duplicate-keys-last-value-wins",
+      "description": "Parser uses last-value-wins for duplicate keys (SHOULD accept or reject)",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": \"alice\", \"name\": \"First\", \"name\": \"Second\"}"
+      ],
+      "state": {
+        "alice": {"id": "alice", "name": "Second"}
+      },
+      "alternateExpect": {
+        "expect": "reject",
+        "error": "PARSE_ERROR"
+      }
+    },
+    {
+      "id": "recovery-duplicate-key-in-key-field",
+      "description": "Parser uses last-value-wins for duplicate key field (SHOULD accept or reject)",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": \"alice\", \"id\": \"bob\", \"value\": 1}"
+      ],
+      "state": {
+        "bob": {"id": "bob", "value": 1}
+      },
+      "alternateExpect": {
+        "expect": "reject",
+        "error": "PARSE_ERROR"
+      }
+    },
+    {
+      "id": "recovery-duplicate-keys-nested",
+      "description": "Parser uses last-value-wins for nested duplicate keys (SHOULD accept or reject)",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": \"test\", \"data\": {\"x\": 1, \"x\": 2}}"
+      ],
+      "state": {
+        "test": {"id": "test", "data": {"x": 2}}
+      },
+      "alternateExpect": {
+        "expect": "reject",
+        "error": "PARSE_ERROR"
+      }
+    },
+    {
+      "id": "recovery-duplicate-keys-multiple-records",
+      "description": "Parser uses last-value-wins for duplicates across multiple records",
+      "key": "id",
+      "input": [
+        "{\"$jsonlt\": {\"version\": 1, \"key\": \"id\"}}",
+        "{\"id\": 1, \"a\": 1, \"a\": 2}",
+        "{\"id\": 2, \"b\": 3, \"b\": 4}"
+      ],
+      "state": {
+        "1": {"id": 1, "a": 2},
+        "2": {"id": 2, "b": 4}
+      },
+      "alternateExpect": {
+        "expect": "reject",
+        "error": "PARSE_ERROR"
+      }
     }
   ]
 }

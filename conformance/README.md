@@ -10,6 +10,16 @@ Tests are declarative data, not executable code. Each implementation writes a ha
 
 The suite intentionally avoids testing implementation-specific features like query languages, indexing, or performance characteristics. Those belong in implementation-specific test suites.
 
+## Conformance profiles
+
+The specification defines two conformance profiles that implementations may support:
+
+The Parser profile covers reading JSONLT files. Parsers follow Postel's Law, accepting input liberally while maintaining correctness. Parser conformance includes SHOULD-level recovery behaviors like stripping CRLF line endings, skipping empty lines, and ignoring truncated final lines.
+
+The Generator profile covers writing JSONLT files. Generators produce strictly conformant output that any parser can read. Generator conformance requires deterministic serialization with sorted keys, no whitespace outside strings, and rejection of invalid records.
+
+Most implementations support both profiles (they can read and write JSONLT files). The test suite is organized to test each profile's requirements separately.
+
 ## Consuming the test suite
 
 Implementations can consume the test suite in several ways:
@@ -42,85 +52,63 @@ Each test file contains an array of test cases wrapped in a container object:
 
 The `$schema` field references the JSON Schema for validation. The `suite` field identifies the test category.
 
-## Test categories
+## Test suites and profiles
 
-### format
+Tests are organized into suite files by category. Each suite targets specific aspects of conformance:
 
-Tests that implementations correctly parse valid files and reject invalid files according to the physical format rules.
+| Suite              | Profile   | Description                                          |
+|--------------------|-----------|------------------------------------------------------|
+| `format.jsonc`     | Parser    | Physical format parsing, accepting and rejecting     |
+| `state.jsonc`      | Parser    | Logical state computation from append-only log       |
+| `keys.jsonc`       | Both      | Key validation, extraction, comparison, and ordering |
+| `header.jsonc`     | Parser    | Header parsing and key specifier validation          |
+| `ops.jsonc`        | Both      | Interface operations (get, put, delete, etc.)        |
+| `generator.jsonc`  | Generator | Serialization format and output validation           |
+| `recovery.jsonc`   | Parser    | SHOULD-level recovery behaviors                      |
+| `transactions.jsonc` | Both    | Transaction semantics (isolation, commit, conflict)  |
+| `compaction.jsonc` | Generator | Compaction output                                    |
 
-Subcategories:
-
-- `format/common` — tests both strict and lenient readers must pass
-- `format/strict` — tests only strict readers must pass (lenient readers may accept these inputs)
-- `format/lenient` — tests only lenient readers must pass (strict readers must reject these inputs)
-
-### state
-
-Tests that a sequence of operations produces the correct logical state. These verify the core append-only log semantics.
-
-### serial
-
-Tests that serialization produces deterministic output. Subcategories:
-
-- `serial/lenient` — sorted keys, no whitespace (may vary in number formatting)
-- `serial/strict` — RFC 8785 JCS compliance (byte-identical output)
-
-### ops
-
-Tests for interface operations: `get`, `put`, `delete`, `has`, `all`, `keys`, `count`, `clear`, `compact`.
-
-### tx
-
-Tests for transaction semantics: isolation, commit, abort, and conflict detection.
-
-### header
-
-Tests for header parsing and key specifier validation.
-
-### keys
-
-Tests for key validation, extraction, comparison, and ordering.
-
-### recovery
-
-Tests for lenient reader behavior with truncated or malformed files (crash recovery).
+Implementations declare which profiles they support. Test harnesses skip suites that don't apply to the implementation's declared profiles.
 
 ## Common test fields
 
 All test cases include:
 
-| Field         | Type   | Required | Description                                                  |
-|---------------|--------|----------|--------------------------------------------------------------|
-| `id`          | string | yes      | Unique identifier (e.g., `"state-001"`)                      |
-| `description` | string | yes      | Human-readable description                                   |
-| `profile`     | string | no       | `"strict"`, `"lenient"`, or `"common"` (default: `"common"`) |
+| Field         | Type   | Required | Description                             |
+|---------------|--------|----------|-----------------------------------------|
+| `id`          | string | yes      | Unique identifier (e.g., `"state-001"`) |
+| `description` | string | yes      | Human-readable description              |
 
 ## Test structures by category
 
 ### format tests
 
+Format tests verify that parsers correctly accept valid files and reject invalid files.
+
 ```json
 {
-  "id": "format-crlf-rejected",
-  "description": "Strict readers reject files with CRLF line endings",
-  "profile": "strict",
+  "id": "format-invalid-json",
+  "description": "Invalid JSON is rejected",
   "key": "id",
-  "input": "{\"id\": 1}\r\n",
+  "input": "{\"id\": 1, \"name\": }\n",
   "expect": "reject",
   "error": "PARSE_ERROR"
 }
 ```
 
-| Field         | Type            | Description                                       |
-|---------------|-----------------|---------------------------------------------------|
-| `key`         | string or array | Key specifier for opening the table               |
-| `input`       | string or array | File content (array elements joined with `\n`)    |
-| `inputBase64` | string          | Alternative to `input` for binary content         |
-| `expect`      | string          | `"accept"` or `"reject"`                          |
-| `error`       | string          | Expected error category if `expect` is `"reject"` |
-| `state`       | object          | Expected logical state if `expect` is `"accept"`  |
+| Field             | Type            | Description                                       |
+|-------------------|-----------------|---------------------------------------------------|
+| `key`             | string or array | Key specifier for opening the table               |
+| `input`           | string or array | File content (array elements joined with `\n`)    |
+| `inputBase64`     | string          | Alternative to `input` for binary content         |
+| `expect`          | string          | `"accept"` or `"reject"`                          |
+| `error`           | string          | Expected error category if `expect` is `"reject"` |
+| `state`           | object          | Expected logical state if `expect` is `"accept"`  |
+| `alternateExpect` | object          | Alternative valid outcome for SHOULD-level requirements |
 
 ### state tests
+
+State tests verify that parsing a file produces the correct logical state.
 
 ```json
 {
@@ -143,29 +131,38 @@ All test cases include:
 | `input` | string or array | File content                                               |
 | `state` | object          | Expected logical state (map from serialized key to record) |
 
-### serial tests
+### generator tests
+
+Generator tests verify that serialization produces correct, deterministic output.
 
 ```json
 {
-  "id": "serial-key-order",
-  "description": "Object keys are sorted lexicographically",
-  "record": {"z": 1, "a": 2, "m": 3},
-  "lenient": "{\"a\":2,\"m\":3,\"z\":1}",
-  "strict": "{\"a\":2,\"m\":3,\"z\":1}"
+  "id": "generator-key-order-simple",
+  "description": "Generator sorts object keys lexicographically",
+  "key": "id",
+  "state": {
+    "1": {"id": 1, "zebra": "z", "apple": "a", "mango": "m"}
+  },
+  "outputMatches": "\"apple\":\"a\",\"id\":1,\"mango\":\"m\",\"zebra\":\"z\""
 }
 ```
 
-| Field     | Type   | Description                                     |
-|-----------|--------|-------------------------------------------------|
-| `record`  | object | Record to serialize                             |
-| `lenient` | string | Expected output from lenient writer (optional)  |
-| `strict`  | string | Expected output from strict writer (byte-exact) |
+| Field             | Type   | Description                                         |
+|-------------------|--------|-----------------------------------------------------|
+| `key`             | string or array | Key specifier                               |
+| `state`           | object | Logical state to serialize                          |
+| `record`          | object | Single record to serialize (alternative to `state`) |
+| `outputMatches`   | string | Regex pattern the output must match                 |
+| `outputNotMatches`| string | Regex pattern the output must not match             |
+| `outputExact`     | string | Exact expected output (byte-for-byte)               |
+| `expect`          | string | `"accept"` or `"reject"` for validation tests       |
+| `error`           | string | Expected error category if `expect` is `"reject"`   |
 
-When `lenient` is omitted, harnesses should verify the output is valid JSON that deserializes to the same value, but not require exact byte match.
+Generator tests also verify rejection of invalid records (null keys, $-prefixed fields, etc.).
 
 ### ops tests
 
-Operations tests use a sequence of steps:
+Operations tests execute a sequence of API operations and verify return values.
 
 ```json
 {
@@ -205,38 +202,44 @@ For operations that should fail, use `error` instead of `returns`:
 {"op": "put", "record": {"id": null}, "error": "KEY_ERROR"}
 ```
 
-### tx tests
+### transactions tests
 
 Transaction tests specify setup, transaction operations, and post-commit verification:
 
 ```json
 {
-  "id": "tx-isolation",
+  "id": "tx-isolation-read",
   "description": "Reads within transaction see transaction writes",
   "key": "id",
   "setup": [
-    {"op": "put", "record": {"id": "a", "v": 1}}
+    {"op": "put", "record": {"id": "alice", "v": 1}}
   ],
   "transaction": [
-    {"op": "put", "record": {"id": "a", "v": 2}},
-    {"op": "get", "key": "a", "returns": {"id": "a", "v": 2}}
+    {"op": "put", "record": {"id": "alice", "v": 2}},
+    {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}}
   ],
   "commit": true,
   "after": [
-    {"op": "get", "key": "a", "returns": {"id": "a", "v": 2}}
+    {"op": "get", "key": "alice", "returns": {"id": "alice", "v": 2}}
   ]
 }
 ```
 
-| Field         | Type    | Description                                     |
-|---------------|---------|-------------------------------------------------|
-| `setup`       | array   | Operations before transaction starts            |
-| `transaction` | array   | Operations within the transaction               |
-| `commit`      | boolean | Whether commit should succeed (default: `true`) |
-| `error`       | string  | Expected error if `commit` is `false`           |
-| `after`       | array   | Operations after commit (verify final state)    |
+| Field                   | Type    | Description                                        |
+|-------------------------|---------|----------------------------------------------------|
+| `setup`                 | array   | Operations before transaction starts               |
+| `transaction`           | array   | Operations within the transaction                  |
+| `commit`                | boolean | Whether commit should succeed (default: `true`)    |
+| `error`                 | string  | Expected error if commit fails                     |
+| `after`                 | array   | Operations after commit (verify final state)       |
+| `externalModifications` | array   | Operations by another writer during transaction    |
+| `nestedAttempt`         | boolean | Whether to attempt nested transaction (should fail)|
+
+The `externalModifications` field simulates concurrent modification to test conflict detection.
 
 ### header tests
+
+Header tests verify header parsing and key specifier behavior.
 
 ```json
 {
@@ -296,20 +299,27 @@ Key validation and ordering tests:
 
 ### recovery tests
 
+Recovery tests verify Parser SHOULD-level behaviors for handling non-conformant input gracefully.
+
 ```json
 {
-  "id": "recovery-truncated-line",
-  "description": "Lenient reader ignores truncated final line without newline",
-  "profile": "lenient",
+  "id": "recovery-truncated-final-line",
+  "description": "Parser ignores truncated final line without newline (SHOULD per spec)",
   "key": "id",
-  "input": "{\"id\": 1, \"v\": 1}\n{\"id\": 2, \"v\":",
+  "input": "{\"id\": 1}\n{\"id\":",
   "state": {
-    "1": {"id": 1, "v": 1}
+    "1": {"id": 1}
   }
 }
 ```
 
-These tests verify lenient readers handle crash scenarios gracefully.
+These tests verify behaviors like CRLF stripping, empty line skipping, BOM handling, truncated line recovery, and duplicate key handling. Parsers that implement these SHOULD requirements pass these tests; parsers that don't may skip them.
+
+Some recovery tests use `alternateExpect` to specify two valid outcomes. For example, duplicate key tests accept either:
+- Rejection with PARSE_ERROR (parsers that detect duplicates), or
+- Acceptance with last-value-wins state (parsers that don't detect duplicates)
+
+A test passes if either the primary expectation or the alternate expectation is satisfied.
 
 ## Key serialization in state maps
 
@@ -349,11 +359,13 @@ Tests that expect errors specify one of these categories:
 
 | Category            | Description                                                  |
 |---------------------|--------------------------------------------------------------|
-| `PARSE_ERROR`       | Invalid JSON, wrong type, duplicate keys, invalid `$deleted` |
+| `PARSE_ERROR`       | Invalid JSON, wrong type, duplicate keys (if detected), invalid `$deleted` |
 | `KEY_ERROR`         | Missing key field, invalid key type, key specifier mismatch  |
+| `LIMIT_ERROR`       | Key length, tuple elements, or other limits exceeded         |
 | `IO_ERROR`          | File read/write failures                                     |
 | `LOCK_ERROR`        | Lock acquisition timeout                                     |
-| `TRANSACTION_ERROR` | Nested transaction, commit conflict                          |
+| `CONFLICT_ERROR`    | Transaction commit conflict                                  |
+| `TRANSACTION_ERROR` | Nested transaction or other transaction protocol error       |
 
 Harnesses should map implementation-specific error types to these categories.
 
@@ -374,36 +386,49 @@ Arrays are compared element-by-element in order.
 A conforming test harness:
 
 1. Loads test files from this directory
-2. Filters tests by the profiles the implementation supports
+2. Filters suites by the profiles the implementation supports
 3. For each test, sets up the environment (creates temp files as needed)
 4. Executes the test according to its category
 5. Compares results using the comparison rules above
 6. Reports pass/fail/skip for each test
 
-Harnesses should accept configuration for which profiles to test (`strict`, `lenient`, or both).
+Harnesses should accept configuration for which profiles to test (`parser`, `generator`, or both).
 
 Example harness pseudocode:
 
 ```python
-def run_test(test, implementation):
-    if test.profile not in implementation.supported_profiles:
-        return SKIP
+SUITE_PROFILES = {
+    "format": ["parser"],
+    "state": ["parser"],
+    "generator": ["generator"],
+    "recovery": ["parser"],
+    "ops": ["parser", "generator"],
+    "transactions": ["parser", "generator"],
+    "keys": ["parser", "generator"],
+    "header": ["parser"],
+    "compaction": ["generator"],
+}
 
+def run_suite(suite_name, implementation):
+    required_profiles = SUITE_PROFILES[suite_name]
+    if not any(p in implementation.profiles for p in required_profiles):
+        return SKIP_ALL
+
+    for test in load_suite(suite_name):
+        yield run_test(test, implementation)
+
+def run_test(test, impl):
     match test.category:
-        case "format":
-            return run_format_test(test, implementation)
-        case "state":
-            return run_state_test(test, implementation)
+        case "format" | "state" | "recovery":
+            return run_parser_test(test, impl)
+        case "generator":
+            return run_generator_test(test, impl)
         case "ops":
-            return run_ops_test(test, implementation)
+            return run_ops_test(test, impl)
         # ...
-
-def run_state_test(test, impl):
-    with temp_file(test.input) as path:
-        table = impl.open(path, key=test.key)
-        actual_state = {serialize_key(k): v for k, v in table.all()}
-        return PASS if actual_state == test.state else FAIL
 ```
+
+See the [conformance test harness design document](../design/conformance-test-harness.md) for a detailed protocol specification.
 
 ## Test file organization
 
@@ -416,14 +441,15 @@ conformance/
 │       ├── suite.schema.json   # JSON Schema for test files
 │       └── report.schema.json  # JSON Schema for conformance reports
 └── suite/
-    ├── format.json       # Physical format parsing tests
-    ├── state.json        # Logical state computation tests
-    ├── keys.json         # Key validation and ordering tests
-    ├── header.json       # Header parsing tests
-    ├── ops.json          # API operation tests
-    ├── recovery.json     # Recovery from non-conforming input (optional)
-    ├── transactions.json # Transaction operations (optional)
-    └── compaction.json   # Compaction operations (optional)
+    ├── format.jsonc      # Physical format parsing tests (Parser)
+    ├── state.jsonc       # Logical state computation tests (Parser)
+    ├── generator.jsonc   # Serialization output tests (Generator)
+    ├── keys.jsonc        # Key validation and ordering tests (Both)
+    ├── header.jsonc      # Header parsing tests (Parser)
+    ├── ops.jsonc         # API operation tests (Both)
+    ├── recovery.jsonc    # Parser SHOULD-level recovery (Parser)
+    ├── transactions.jsonc # Transaction semantics (Both)
+    └── compaction.jsonc  # Compaction output (Generator)
 ```
 
 ## Versioning
@@ -451,7 +477,7 @@ Implementations that want to provide a query language (like MongoDB-style operat
 
 New tests are welcome. When adding tests:
 
-1. Use a unique `id` following the pattern `{category}-{description}`
+1. Use a unique `id` following the pattern `{suite}-{description}`
 2. Write a clear `description` explaining what the test verifies
 3. Reference the relevant section of the spec in a comment if helpful
 4. Ensure the test is minimal (tests one thing)

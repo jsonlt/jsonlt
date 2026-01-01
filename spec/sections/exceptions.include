@@ -11,7 +11,7 @@ A <dfn>parse error</dfn> is an error that occurs when reading a JSONLT file due 
 * The file contains byte sequences that are not valid UTF-8.
 * A line in the file is not valid JSON.
 * A line in the file is valid JSON but not a JSON object.
-* A JSON object contains duplicate keys.
+* A JSON object contains duplicate keys (if detected).
 * A line contains `$deleted` with a value other than the boolean `true`.
 * A [=header=] appears at a position other than the first line.
 * A [=header=] contains a `$jsonlt` value that is not a JSON object.

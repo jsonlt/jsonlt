@@ -47,13 +47,21 @@
       "expect": "reject",
       "error": "PARSE_ERROR"
     },
+    // Duplicate key detection is a SHOULD requirement per spec. Parsers that detect
+    // duplicates reject with PARSE_ERROR; parsers that don't detect use last-value-wins.
     {
       "id": "format-duplicate-keys-rejected",
-      "description": "JSON objects with duplicate keys are rejected",
+      "description": "JSON objects with duplicate keys are rejected (SHOULD) or use last-value-wins",
       "key": "id",
       "input": "{\"id\": 1, \"id\": 2}\n",
       "expect": "reject",
-      "error": "PARSE_ERROR"
+      "error": "PARSE_ERROR",
+      "alternateExpect": {
+        "expect": "accept",
+        "state": {
+          "2": {"id": 2}
+        }
+      }
     },
     {
       "id": "format-deleted-non-boolean",

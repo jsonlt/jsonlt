@@ -337,6 +337,22 @@
         "state": {
           "type": "object",
           "additionalProperties": { "type": "object" }
+        },
+        "alternateExpect": {
+          "type": "object",
+          "description": "Alternative valid outcome for SHOULD-level requirements. If present, the test passes if EITHER the primary expectation OR this alternate is satisfied.",
+          "properties": {
+            "expect": {
+              "type": "string",
+              "enum": ["accept", "reject"]
+            },
+            "error": { "$ref": "#/$defs/errorCategory" },
+            "state": {
+              "type": "object",
+              "additionalProperties": { "type": "object" }
+            }
+          },
+          "required": ["expect"]
         }
       },
       "required": ["key", "expect"],
@@ -452,6 +468,22 @@
         "state": {
           "type": "object",
           "additionalProperties": { "type": "object" }
+        },
+        "alternateExpect": {
+          "type": "object",
+          "description": "Alternative valid outcome. For recovery tests with SHOULD-level behaviors, this allows testing that parsers either reject or recover as expected.",
+          "properties": {
+            "expect": {
+              "type": "string",
+              "enum": ["accept", "reject"]
+            },
+            "error": { "$ref": "#/$defs/errorCategory" },
+            "state": {
+              "type": "object",
+              "additionalProperties": { "type": "object" }
+            }
+          },
+          "required": ["expect"]
         }
       },
       "required": ["key", "state"]

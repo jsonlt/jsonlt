@@ -60,6 +60,7 @@ An implementation claiming conformance to this specification SHOULD document:
 * Which profile(s) it conforms to ([=conforming parser=], [=conforming generator=], or both)
 * Which optional features it supports
 * Any implementation-specific limits ([=key length=], [=record size=], [=nesting depth=])
+* Whether duplicate JSON keys in input are detected and rejected
 * Any extensions or deviations from this specification
 
 Optional features that implementations MAY support include:
