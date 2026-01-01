@@ -231,14 +231,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Vale styles (keep custom vocabularies and styles)
-.vale/*
-!.vale/JSONLTSpec
-!.vale/config/
-.vale/config/*
-!.vale/config/vocabularies/
-.vale/config/vocabularies/*
-!.vale/config/vocabularies/JSONLTSpec/
-!.vale/config/vocabularies/JSONLT/
+# Vale styles and packages (downloaded via vale sync)
+.vale/
 
 reviews/

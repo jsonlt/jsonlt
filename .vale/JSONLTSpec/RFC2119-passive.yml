@@ -1,9 +1,0 @@
----
-extends: existence
-message: "RFC 2119 keyword in passive construction - consider active voice"
-level: warning
-tokens:
-  - 'SHALL be \w+ed'
-  - 'SHOULD be \w+ed'
-  - 'MUST be \w+ed'
-  - 'MAY be \w+ed'
