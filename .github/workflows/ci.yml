@@ -69,7 +69,7 @@ jobs:
         run: just lint-conformance-tests
 
       - name: Lint GitHub Actions workflows
-        uses: reviewdog/action-actionlint@83e4ed25b168066ad8f62f5afbb29ebd8641d982 # v1.6.8
+        uses: reviewdog/action-actionlint@0d952c597ef8459f634d7145b0b044a9699e5e43 # v1.6.8
 
   build:
     name: Build
